@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>音が遠くなりました — Our Session</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #15151a;
+      color: #f5f5f7;
+      font-family: "Outfit", system-ui, -apple-system, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: rgba(26,26,32,0.72);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 40px 28px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      backdrop-filter: blur(20px);
+    }
+    .icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+      display: block;
+      opacity: 0.85;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #f5f5f7;
+      margin-bottom: 12px;
+      letter-spacing: -0.3px;
+    }
+    p {
+      font-size: 14px;
+      color: #9a9aa8;
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+    button {
+      background: #e84a5f;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(232,74,95,0.35);
+      transition: opacity 0.15s;
+      width: 100%;
+    }
+    button:active { opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="icon">🎵</span>
+    <h1>音が遠くなりました</h1>
+    <p>電波の届く場所で、もう一度開いてみてね。<br>下書きは消えていません。</p>
+    <button onclick="location.reload()">もう一度開く</button>
+  </div>
+</body>
+</html>

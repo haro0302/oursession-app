@@ -1,0 +1,239 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #15151a;
+  --bg2: #1a1a20;
+  --bg3: #22222a;
+  --card: rgba(26, 26, 32, 0.55);
+  --card2: rgba(34, 34, 42, 0.5);
+  --card-hl: rgba(42, 42, 50, 0.7);
+  --border: rgba(255, 255, 255, 0.06);
+  --border2: rgba(255, 255, 255, 0.12);
+  --text: #f5f5f7;
+  --text2: #9a9aa8;
+  --text3: #5a5a66;
+  --red: #e84a5f;
+  --red2: #ed6a7c;
+  --red-bg: rgba(232, 74, 95, 0.1);
+  --red-border: rgba(232, 74, 95, 0.32);
+  --red-glow: 0 0 24px rgba(232, 74, 95, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-outfit), "Hiragino Kaku Gothic ProN", "ヒラギノ角ゴ ProN", "Meiryo", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* スクロールバー非表示（モバイルライク） */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  scrollbar-width: none;
+}
+
+/* ==================== AURORA ==================== */
+.aurora {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.aurora::before,
+.aurora::after,
+.aurora .blob1,
+.aurora .blob2 {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 1;
+  will-change: transform;
+}
+
+.aurora::before {
+  width: 420px;
+  height: 420px;
+  top: -140px;
+  left: -160px;
+  background: radial-gradient(circle, rgba(220, 140, 110, 0.18) 0%, transparent 65%);
+  animation: auroraFloat1 28s ease-in-out infinite;
+}
+
+.aurora::after {
+  width: 380px;
+  height: 380px;
+  top: 30%;
+  right: -160px;
+  background: radial-gradient(circle, rgba(200, 100, 130, 0.16) 0%, transparent 65%);
+  animation: auroraFloat2 34s ease-in-out infinite;
+}
+
+.aurora .blob1 {
+  width: 340px;
+  height: 340px;
+  bottom: 80px;
+  left: -120px;
+  background: radial-gradient(circle, rgba(180, 120, 90, 0.14) 0%, transparent 65%);
+  animation: auroraFloat3 24s ease-in-out infinite;
+}
+
+.aurora .blob2 {
+  width: 300px;
+  height: 300px;
+  bottom: 35%;
+  right: -100px;
+  background: radial-gradient(circle, rgba(160, 90, 120, 0.14) 0%, transparent 65%);
+  animation: auroraFloat4 30s ease-in-out infinite;
+}
+
+@keyframes auroraFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(60px, 80px) scale(1.15); }
+  66% { transform: translate(-40px, 140px) scale(0.95); }
+}
+
+@keyframes auroraFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40% { transform: translate(-70px, 60px) scale(1.1); }
+  70% { transform: translate(-30px, -50px) scale(1.05); }
+}
+
+@keyframes auroraFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(80px, -90px) scale(1.2); }
+}
+
+@keyframes auroraFloat4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  35% { transform: translate(-60px, -70px) scale(0.9); }
+  70% { transform: translate(40px, 30px) scale(1.15); }
+}
+
+/* ==================== TOAST ==================== */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to { opacity: 0; transform: translateX(-50%) translateY(20px); }
+}
+
+/* ==================== FLOATING NAV SPRING ==================== */
+
+/* スプリングカーブ定数: cubic-bezier(0.34, 1.56, 0.64, 1) は自然なバネの跳ね返り */
+@keyframes navSpringIn {
+  0% {
+    transform: translateX(-50%) translateY(80px) scale(0.7);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.floating-nav {
+  animation: navSpringIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.nav-item-link {
+  transition:
+    background 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    color 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-item-link:active {
+  transform: scale(0.82);
+}
+
+.nav-post-btn {
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-post-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 22px rgba(232, 74, 95, 0.55);
+}
+
+.nav-post-btn:active {
+  transform: scale(0.88);
+  box-shadow: 0 2px 10px rgba(232, 74, 95, 0.4);
+}
+
+/* ==================== BOTTOM DRAWER ==================== */
+@keyframes drawerIn {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ==================== AUDIO ==================== */
+@keyframes recPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+}
+
+@keyframes listeningPulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 0.4; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==================== UTILS ==================== */
+.card-blur {
+  background: var(--card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+}
+
+.card2-blur {
+  background: var(--card2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+}
+
+.text-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ==================== CHIP (選択時は塗りつぶさない) ==================== */
+.chip-selected {
+  background: rgba(232, 74, 95, 0.04);
+  border: 1px solid var(--red-border);
+  color: var(--red2);
+  font-weight: 600;
+}
