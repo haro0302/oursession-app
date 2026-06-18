@@ -4,27 +4,49 @@ import type { Database } from "@/types/database";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
+async function redirectAfterAuth(
+  supabase: Awaited<ReturnType<typeof createServerSupabase>>,
+  userId: string,
+  origin: string
+) {
+  const result = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const profile = result.data as ProfileRow | null;
+
+  if (!profile?.area) {
+    return NextResponse.redirect(`${origin}/onboarding`);
+  }
+  return NextResponse.redirect(`${origin}/timeline?welcome=returning`);
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const token_hash = searchParams.get("token_hash");
+  const type = searchParams.get("type");
 
+  const supabase = await createServerSupabase();
+
+  // PKCE フロー（新しい形式）
   if (code) {
-    const supabase = await createServerSupabase();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
     if (!error && data.user) {
-      const result = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", data.user.id)
-        .maybeSingle();
+      return redirectAfterAuth(supabase, data.user.id, origin);
+    }
+  }
 
-      const profile = result.data as ProfileRow | null;
-
-      if (!profile?.area) {
-        return NextResponse.redirect(`${origin}/onboarding`);
-      }
-      return NextResponse.redirect(`${origin}/timeline?welcome=returning`);
+  // token_hash フロー（メール確認・マジックリンクの旧形式）
+  if (token_hash && type) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: type as "email" | "recovery" | "invite" | "email_change",
+    });
+    if (!error && data.user) {
+      return redirectAfterAuth(supabase, data.user.id, origin);
     }
   }
 
