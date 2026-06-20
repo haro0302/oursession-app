@@ -182,24 +182,26 @@ export default function SessionCard({
           {author.is_practice && <PracticeBadge mini />}
         </div>
 
-        <button
-          type="button"
-          onClick={handleSave}
-          aria-label={saved ? "保存済み" : "保存する"}
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "4px",
-            color: saved ? "var(--red2)" : "var(--text3)",
-            transition: "color 0.18s",
-          }}
-        >
-          <Bookmark size={15} fill={saved ? "currentColor" : "none"} />
-        </button>
+        {!isOwn && (
+          <button
+            type="button"
+            onClick={handleSave}
+            aria-label={saved ? "保存済み" : "保存する"}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "4px",
+              color: saved ? "var(--red2)" : "var(--text3)",
+              transition: "color 0.18s",
+            }}
+          >
+            <Bookmark size={15} fill={saved ? "currentColor" : "none"} />
+          </button>
+        )}
 
         {!isOwn && (
           <>
