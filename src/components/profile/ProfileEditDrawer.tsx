@@ -3,68 +3,124 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { X, Edit2 } from "lucide-react";
+import { Edit2, Camera, Plus, X } from "lucide-react";
 import { updateProfile } from "@/lib/db";
+import { uploadAvatar } from "@/lib/avatar-upload";
+import { useProfileStore } from "@/store/profileStore";
 import { showToast } from "@/components/ui/Toast";
-import type { Database } from "@/types/database";
-
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-
-const INSTRUMENTS = ["ギター", "ベース", "ドラム", "キーボード", "ボーカル", "管楽器", "弦楽器", "その他"];
-const GENRES = ["ロック", "ジャズ", "ポップ", "R&B", "ブルース", "クラシック", "フォーク", "メタル", "ソウル", "その他"];
+import { PREFECTURES } from "@/lib/constants/prefectures";
+import FilterSheet from "@/components/session/FilterSheet";
+import type { Profile } from "@/types/database";
 
 interface Props {
   profile: Profile;
 }
 
+const MAX_TAGS = 10;
+const MAX_BIO = 150;
+
 export default function ProfileEditDrawer({ profile }: Props) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [open, setOpen] = useState(false);
-  const [nickname, setNickname] = useState(profile.nickname ?? "");
-  const [bio, setBio] = useState(profile.bio ?? "");
-  const [isPractice, setIsPractice] = useState(profile.is_practice ?? true);
-  const [instruments, setInstruments] = useState<string[]>(profile.instruments ?? []);
-  const [genres, setGenres] = useState<string[]>(profile.genres ?? []);
-  const [artistsInput, setArtistsInput] = useState((profile.favorite_artists ?? []).join(", "));
-  const [saving, setSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const portalRef = useRef<HTMLElement | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // フィールド
+  const [nickname, setNickname] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [isPractice, setIsPractice] = useState(true);
+  const [bio, setBio] = useState("");
+  const [instruments, setInstruments] = useState<string[]>([]);
+  const [genres, setGenres] = useState<string[]>([]);
+  const [artists, setArtists] = useState<string[]>([]);
+  const [tracks, setTracks] = useState<string[]>([]);
+  const [area, setArea] = useState("");
+  const [snsX, setSnsX] = useState("");
+  const [snsIg, setSnsIg] = useState("");
+  const [snsCloud, setSnsCloud] = useState("");
+
+  // FilterSheet
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [filterSheetKey, setFilterSheetKey] = useState<"instrument" | "genre">("instrument");
+
+  // タグ入力
+  const [artistInputOpen, setArtistInputOpen] = useState(false);
+  const [artistInput, setArtistInput] = useState("");
+  const artistInputRef = useRef<HTMLInputElement>(null);
+  const [trackInputOpen, setTrackInputOpen] = useState(false);
+  const [trackInput, setTrackInput] = useState("");
+  const trackInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    portalRef.current = document.body;
-    setMounted(true);
-  }, []);
+    if (artistInputOpen) artistInputRef.current?.focus();
+  }, [artistInputOpen]);
 
-  function toggleChip(list: string[], setList: (v: string[]) => void, value: string) {
-    setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
-  }
+  useEffect(() => {
+    if (trackInputOpen) trackInputRef.current?.focus();
+  }, [trackInputOpen]);
 
   function handleOpen() {
+    const sns = (profile.sns_links ?? {}) as Record<string, string>;
     setNickname(profile.nickname ?? "");
-    setBio(profile.bio ?? "");
+    setAvatarUrl(profile.avatar_url ?? null);
     setIsPractice(profile.is_practice ?? true);
+    setBio(profile.bio ?? "");
     setInstruments(profile.instruments ?? []);
     setGenres(profile.genres ?? []);
-    setArtistsInput((profile.favorite_artists ?? []).join(", "));
+    setArtists(profile.favorite_artists ?? []);
+    setTracks((profile.favorite_tracks as string[] | null) ?? []);
+    setArea(profile.area ?? "");
+    setSnsX(sns.x ?? "");
+    setSnsIg(sns.instagram ?? "");
+    setSnsCloud(sns.soundcloud ?? "");
+    setArtistInputOpen(false);
+    setArtistInput("");
+    setTrackInputOpen(false);
+    setTrackInput("");
+    setFilterSheetOpen(false);
     setOpen(true);
   }
 
+  function handleClose() {
+    setOpen(false);
+    setFilterSheetOpen(false);
+  }
+
+  async function handleAvatarSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setAvatarUploading(true);
+    const result = await uploadAvatar(file, profile.id, avatarUrl);
+    setAvatarUploading(false);
+    if ("error" in result) { showToast(result.error); return; }
+    setAvatarUrl(result.url);
+  }
+
   async function handleSave() {
-    if (!nickname.trim() || saving) return;
+    if (!nickname.trim()) { showToast("ニックネームを入力してください"); return; }
+    if (saving) return;
     setSaving(true);
     try {
-      const favoriteArtists = artistsInput
-        .split(/[,、]/)
-        .map((s) => s.trim())
-        .filter(Boolean);
       await updateProfile(profile.id, {
         nickname: nickname.trim(),
-        bio: bio.trim() || null,
         is_practice: isPractice,
+        bio: bio.trim() || null,
         instruments,
         genres,
-        favorite_artists: favoriteArtists,
+        favorite_artists: artists,
+        favorite_tracks: tracks,
+        area: area || null,
+        sns_links: { x: snsX.trim(), instagram: snsIg.trim(), soundcloud: snsCloud.trim() },
+        avatar_url: avatarUrl,
       });
+      // ストアを即時更新（router.refresh() 完了を待たずに反映）
+      useProfileStore.getState().refetch(profile.id);
       showToast("プロフィールを更新しました");
       setOpen(false);
       router.refresh();
@@ -75,148 +131,397 @@ export default function ProfileEditDrawer({ profile }: Props) {
     }
   }
 
-  const chipStyle = (selected: boolean) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "5px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
-    fontWeight: selected ? 600 : 400,
-    cursor: "pointer",
-    border: `1px solid ${selected ? "var(--red-border)" : "var(--border)"}`,
-    background: selected ? "var(--red-bg)" : "transparent",
-    color: selected ? "var(--red2)" : "var(--text3)",
-    transition: "all 0.15s",
-    userSelect: "none" as const,
-  });
+  function openFilterSheet(key: "instrument" | "genre") {
+    setFilterSheetKey(key);
+    setFilterSheetOpen(true);
+  }
+
+  function addArtist(val: string) {
+    const v = val.trim();
+    if (!v || artists.includes(v) || v.length > 30) return;
+    setArtists((prev) => [...prev, v]);
+  }
+
+  function addTrack(val: string) {
+    const v = val.trim();
+    if (!v || tracks.includes(v) || v.length > 30) return;
+    setTracks((prev) => [...prev, v]);
+  }
+
+  function commitArtistInput() {
+    addArtist(artistInput);
+    setArtistInput("");
+    setArtistInputOpen(false);
+  }
+
+  function commitTrackInput() {
+    addTrack(trackInput);
+    setTrackInput("");
+    setTrackInputOpen(false);
+  }
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        aria-label="プロフィールを編集"
-        style={{ display: "flex", alignItems: "center", gap: "4px", background: "var(--card2)", border: "1px solid var(--border)", borderRadius: "10px", padding: "6px 12px", fontSize: "12px", fontWeight: 600, color: "var(--text2)", cursor: "pointer" }}
-      >
+      {/* トリガーボタン */}
+      <button type="button" onClick={handleOpen} aria-label="プロフィールを編集" className="pe-edit-btn">
         <Edit2 size={13} />
         編集
       </button>
 
-      {open && mounted && portalRef.current && createPortal(
-        <>
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100 }} />
-          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 101, background: "var(--bg2)", borderRadius: "24px 24px 0 0", border: "1px solid var(--border2)", borderBottom: "none", maxHeight: "92dvh", display: "flex", flexDirection: "column", animation: "drawerIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
-            {/* ハンドル + ヘッダー */}
-            <div style={{ flexShrink: 0, padding: "12px 20px 0" }}>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}>
-                <div style={{ width: "40px", height: "4px", borderRadius: "2px", background: "var(--border2)" }} />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "12px", borderBottom: "1px solid var(--border)" }}>
-                <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)" }}>プロフィールを編集</span>
-                <button type="button" onClick={() => setOpen(false)} aria-label="閉じる" style={{ background: "transparent", border: "none", color: "var(--text3)", cursor: "pointer", padding: "4px", display: "flex" }}>
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
+      {/* 非表示ファイル input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleAvatarSelect}
+        aria-label="写真を選択"
+        className="pe-file-input"
+      />
 
-            {/* ボディ */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 100px" }}>
-              {/* ニックネーム */}
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text2)", marginBottom: "6px" }}>
-                  ニックネーム <span style={{ color: "var(--red2)" }}>*</span>
-                </label>
+      {/* 背景 */}
+      <div className={`pe-backdrop${open ? " open" : ""}`} onClick={handleClose} />
+
+      {/* ドロワー本体 (always-in-DOM) */}
+      <div className={`pe-drawer${open ? " open" : ""}`} role="dialog" aria-modal="true" aria-label="プロフィール編集">
+        <div className="pe-handle" />
+
+        {/* ヘッダー */}
+        <div className="pe-header">
+          <button type="button" className="pe-header-btn" onClick={handleClose}>
+            キャンセル
+          </button>
+          <span className="pe-title">プロフィール編集</span>
+          <button
+            type="button"
+            className="pe-header-btn save"
+            onClick={handleSave}
+            disabled={saving || !nickname.trim()}
+          >
+            {saving ? "保存中…" : "保存"}
+          </button>
+        </div>
+
+        {/* ボディ */}
+        <div className="pe-body">
+
+          {/* アバター + ニックネーム */}
+          <div className="pe-section">
+            <div className="pe-avatar-block">
+              <div className="pe-avatar-wrap">
+                <div
+                  className="pe-avatar"
+                  onClick={() => fileInputRef.current?.click()}
+                  role="button"
+                  aria-label="写真を変更"
+                >
+                  {avatarUploading ? (
+                    <span className="pe-avatar-uploading">送信中…</span>
+                  ) : avatarUrl ? (
+                    <img src={avatarUrl} alt="アバター" />
+                  ) : (
+                    <span className="pe-avatar-placeholder">🎵</span>
+                  )}
+                </div>
+                <div
+                  className="pe-avatar-edit"
+                  onClick={() => fileInputRef.current?.click()}
+                  role="button"
+                  aria-label="写真を変更"
+                >
+                  <Camera size={12} color="white" />
+                </div>
+              </div>
+              <div className="pe-name-wrap">
                 <input
                   type="text"
+                  className="pe-name-input"
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   maxLength={30}
-                  style={{ width: "100%", background: "var(--card)", border: "1px solid var(--border2)", borderRadius: "12px", padding: "12px 14px", fontSize: "15px", color: "var(--text)", outline: "none", WebkitAppearance: "none" }}
+                  placeholder="ニックネーム"
                 />
               </div>
+            </div>
+          </div>
 
-              {/* 自己紹介 */}
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text2)", marginBottom: "6px" }}>
-                  自己紹介 <span style={{ color: "var(--text3)", fontWeight: 400 }}>（任意）</span>
-                </label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="好きな音楽や、どんなセッションがしたいかなど。"
-                  maxLength={300}
-                  rows={3}
-                  style={{ width: "100%", background: "var(--card)", border: "1px solid var(--border2)", borderRadius: "12px", padding: "12px 14px", fontSize: "14px", color: "var(--text)", outline: "none", resize: "none", lineHeight: 1.6, fontFamily: "inherit", WebkitAppearance: "none" }}
-                />
+          {/* 練習中トグル */}
+          <button
+            type="button"
+            className="pe-toggle-row"
+            onClick={() => setIsPractice((p) => !p)}
+            aria-pressed={isPractice ? "true" : "false"}
+          >
+            <div className="pe-toggle-info">
+              <div className="pe-toggle-title">
+                🔰 練習中（セッション歓迎）
+                {isPractice && <span className="pe-beginner-badge">ON</span>}
               </div>
+              <div className="pe-toggle-sub">初心者・練習中でもOKと伝えられます</div>
+            </div>
+            <div className={`pe-switch${isPractice ? " on" : ""}`} />
+          </button>
 
-              {/* 楽器 */}
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text2)", marginBottom: "8px" }}>楽器</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {INSTRUMENTS.map((inst) => (
-                    <span key={inst} style={chipStyle(instruments.includes(inst))} onClick={() => toggleChip(instruments, setInstruments, inst)}>
-                      {inst}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          {/* 自己紹介 */}
+          <div className="pe-section">
+            <div className="pe-section-label">
+              自己紹介
+              <span className="pe-section-hint">任意・{MAX_BIO}字以内</span>
+            </div>
+            <div className="pe-textarea-wrap">
+              <textarea
+                className="pe-textarea"
+                value={bio}
+                onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO))}
+                placeholder="楽器歴・好きな音楽・セッションでやりたいことなど"
+                rows={3}
+              />
+              <span className={`pe-counter${bio.length > MAX_BIO ? " over" : ""}`}>
+                {bio.length} / {MAX_BIO}
+              </span>
+            </div>
+          </div>
 
-              {/* ジャンル */}
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text2)", marginBottom: "8px" }}>好きなジャンル <span style={{ color: "var(--text3)", fontWeight: 400 }}>（任意）</span></label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {GENRES.map((genre) => (
-                    <span key={genre} style={chipStyle(genres.includes(genre))} onClick={() => toggleChip(genres, setGenres, genre)}>
-                      {genre}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* 好きなアーティスト */}
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text2)", marginBottom: "6px" }}>
-                  好きなアーティスト <span style={{ color: "var(--text3)", fontWeight: 400 }}>（任意・カンマ区切り）</span>
-                </label>
-                <input
-                  type="text"
-                  value={artistsInput}
-                  onChange={(e) => setArtistsInput(e.target.value)}
-                  placeholder="例: Miles Davis, YOASOBI, くるり"
-                  style={{ width: "100%", background: "var(--card)", border: "1px solid var(--border2)", borderRadius: "12px", padding: "12px 14px", fontSize: "14px", color: "var(--text)", outline: "none", WebkitAppearance: "none" }}
-                />
-              </div>
-
-              {/* 練習中トグル */}
+          {/* 楽器 */}
+          <div className="pe-section">
+            <div className="pe-section-label">楽器</div>
+            <div className="pe-tag-grid">
+              {instruments.map((inst) => (
+                <span key={inst} className="pe-tag">
+                  {inst}
+                  <span className="pe-tag-x" onClick={() => setInstruments((p) => p.filter((v) => v !== inst))}>
+                    <X size={10} color="var(--red2)" />
+                  </span>
+                </span>
+              ))}
               <button
                 type="button"
-                onClick={() => setIsPractice((p) => !p)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px", background: isPractice ? "linear-gradient(135deg, rgba(255,180,60,0.12) 0%, rgba(220,100,60,0.12) 100%)" : "var(--card)", border: `1px solid ${isPractice ? "rgba(220,130,60,0.35)" : "var(--border)"}`, borderRadius: "12px", cursor: "pointer", textAlign: "left", transition: "all 0.25s", marginBottom: "20px" }}
+                className="pe-tag-add"
+                onClick={() => openFilterSheet("instrument")}
               >
-                <span style={{ fontSize: "18px" }}>🔰</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "13px", fontWeight: 600, color: isPractice ? "#d4884a" : "var(--text2)" }}>練習中（セッション歓迎）</div>
-                  <div style={{ fontSize: "11px", color: "var(--text3)", marginTop: "1px" }}>初心者・練習中でもOKと伝えられます</div>
-                </div>
-                <div style={{ width: "40px", height: "22px", borderRadius: "11px", background: isPractice ? "linear-gradient(90deg, #f0a060, #d4704a)" : "var(--bg3)", position: "relative", transition: "background 0.25s", flexShrink: 0 }}>
-                  <div style={{ position: "absolute", top: "3px", left: isPractice ? "21px" : "3px", width: "16px", height: "16px", borderRadius: "50%", background: "white", transition: "left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)" }} />
-                </div>
-              </button>
-
-              {/* 保存ボタン */}
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!nickname.trim() || saving}
-                style={{ width: "100%", background: nickname.trim() && !saving ? "var(--red)" : "var(--card)", border: nickname.trim() && !saving ? "none" : "1px solid var(--border)", borderRadius: "16px", padding: "15px", fontSize: "15px", fontWeight: 700, color: nickname.trim() && !saving ? "white" : "var(--text3)", cursor: nickname.trim() && !saving ? "pointer" : "not-allowed", transition: "background 0.3s, color 0.3s, box-shadow 0.3s", boxShadow: nickname.trim() && !saving ? "0 4px 16px rgba(232,74,95,0.35)" : "none" }}
-              >
-                {saving ? "保存中…" : "保存する"}
+                <Plus size={11} />
+                追加
               </button>
             </div>
           </div>
-        </>,
-        portalRef.current
+
+          {/* ジャンル */}
+          <div className="pe-section">
+            <div className="pe-section-label">好きなジャンル</div>
+            <div className="pe-tag-grid">
+              {genres.map((g) => (
+                <span key={g} className="pe-tag">
+                  {g}
+                  <span className="pe-tag-x" onClick={() => setGenres((p) => p.filter((v) => v !== g))}>
+                    <X size={10} color="var(--red2)" />
+                  </span>
+                </span>
+              ))}
+              <button
+                type="button"
+                className="pe-tag-add"
+                onClick={() => openFilterSheet("genre")}
+              >
+                <Plus size={11} />
+                追加
+              </button>
+            </div>
+          </div>
+
+          {/* 好きなアーティスト */}
+          <div className="pe-section">
+            <div className="pe-section-label">
+              好きなアーティスト
+              <span className="pe-section-hint">任意・最大{MAX_TAGS}件</span>
+            </div>
+            <div className="pe-tag-grid">
+              {artists.map((a) => (
+                <span key={a} className="pe-tag">
+                  {a}
+                  <span className="pe-tag-x" onClick={() => setArtists((p) => p.filter((v) => v !== a))}>
+                    <X size={10} color="var(--red2)" />
+                  </span>
+                </span>
+              ))}
+              {!artistInputOpen && (
+                <button
+                  type="button"
+                  className="pe-tag-add"
+                  onClick={() => setArtistInputOpen(true)}
+                  disabled={artists.length >= MAX_TAGS}
+                >
+                  <Plus size={11} />
+                  追加
+                </button>
+              )}
+            </div>
+            {artistInputOpen && (
+              <div className="pe-suggest-wrap">
+                <div className="pe-suggest-input-wrap">
+                  <input
+                    ref={artistInputRef}
+                    type="text"
+                    className="pe-suggest-input"
+                    value={artistInput}
+                    onChange={(e) => setArtistInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitArtistInput(); } if (e.key === "Escape") { setArtistInputOpen(false); setArtistInput(""); } }}
+                    onBlur={commitArtistInput}
+                    placeholder="アーティスト名を入力して Enter"
+                    maxLength={30}
+                  />
+                  <div className="pe-suggest-close" onClick={() => { setArtistInputOpen(false); setArtistInput(""); }}>
+                    <X size={12} color="var(--text3)" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 好きな曲 */}
+          <div className="pe-section">
+            <div className="pe-section-label">
+              好きな曲
+              <span className="pe-section-hint">任意・最大{MAX_TAGS}件</span>
+            </div>
+            <div className="pe-tag-grid">
+              {tracks.map((t) => (
+                <span key={t} className="pe-tag">
+                  {t}
+                  <span className="pe-tag-x" onClick={() => setTracks((p) => p.filter((v) => v !== t))}>
+                    <X size={10} color="var(--red2)" />
+                  </span>
+                </span>
+              ))}
+              {!trackInputOpen && (
+                <button
+                  type="button"
+                  className="pe-tag-add"
+                  onClick={() => setTrackInputOpen(true)}
+                  disabled={tracks.length >= MAX_TAGS}
+                >
+                  <Plus size={11} />
+                  追加
+                </button>
+              )}
+            </div>
+            {trackInputOpen && (
+              <div className="pe-suggest-wrap">
+                <div className="pe-suggest-input-wrap">
+                  <input
+                    ref={trackInputRef}
+                    type="text"
+                    className="pe-suggest-input"
+                    value={trackInput}
+                    onChange={(e) => setTrackInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitTrackInput(); } if (e.key === "Escape") { setTrackInputOpen(false); setTrackInput(""); } }}
+                    onBlur={commitTrackInput}
+                    placeholder="曲名を入力して Enter"
+                    maxLength={30}
+                  />
+                  <div className="pe-suggest-close" onClick={() => { setTrackInputOpen(false); setTrackInput(""); }}>
+                    <X size={12} color="var(--text3)" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* エリア */}
+          <div className="pe-section">
+            <div className="pe-section-label">エリア</div>
+            <div className="pe-select-wrap">
+              <select
+                className="pe-select"
+                aria-label="エリアを選択"
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+              >
+                <option value="">選択してください</option>
+                {PREFECTURES.map((pref) => (
+                  <option key={pref} value={pref}>{pref}</option>
+                ))}
+                <option value="その他">その他</option>
+              </select>
+              <div className="pe-select-chevron" />
+            </div>
+          </div>
+
+          {/* SNS */}
+          <div className="pe-section">
+            <div className="pe-section-label">
+              SNS連携
+              <span className="pe-section-hint">任意</span>
+            </div>
+            <div className="pe-sns-block">
+              <div className="pe-sns-row">
+                <div className="pe-sns-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.257 5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  className="pe-sns-input"
+                  value={snsX}
+                  onChange={(e) => setSnsX(e.target.value)}
+                  placeholder="X (Twitter) ユーザー名"
+                />
+              </div>
+              <div className="pe-sns-row">
+                <div className="pe-sns-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                    <circle cx="12" cy="12" r="4" />
+                    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  className="pe-sns-input"
+                  value={snsIg}
+                  onChange={(e) => setSnsIg(e.target.value)}
+                  placeholder="Instagram ユーザー名"
+                />
+              </div>
+              <div className="pe-sns-row">
+                <div className="pe-sns-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  className="pe-sns-input"
+                  value={snsCloud}
+                  onChange={(e) => setSnsCloud(e.target.value)}
+                  placeholder="SoundCloud ユーザー名"
+                />
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* FilterSheet を portal でdocument.bodyに逃がす (pe-drawerのbackdrop-filterがposition:fixedを閉じ込めるため) */}
+      {mounted && createPortal(
+        <FilterSheet
+          open={filterSheetOpen}
+          filterKey={filterSheetKey}
+          selected={filterSheetKey === "instrument" ? instruments : genres}
+          onToggle={(opt) => {
+            if (filterSheetKey === "instrument") {
+              setInstruments((prev) => prev.includes(opt) ? prev.filter((v) => v !== opt) : [...prev, opt]);
+            } else {
+              setGenres((prev) => prev.includes(opt) ? prev.filter((v) => v !== opt) : [...prev, opt]);
+            }
+          }}
+          onClear={() => {
+            if (filterSheetKey === "instrument") setInstruments([]);
+            else setGenres([]);
+          }}
+          onClose={() => setFilterSheetOpen(false)}
+        />,
+        document.body
       )}
     </>
   );

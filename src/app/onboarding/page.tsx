@@ -21,7 +21,7 @@ export default async function OnboardingPage() {
 
   const profile = result.data as ProfileRow | null;
 
-  if (profile?.area) redirect("/timeline");
+  if (profile?.onboarded_at) redirect("/timeline");
 
   return <OnboardingScreen userId={user.id} />;
 }

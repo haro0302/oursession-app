@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase-server";
 import IncomingAnswerList from "@/components/answer/IncomingAnswerList";
+import Avatar from "@/components/ui/Avatar";
 import type { Database } from "@/types/database";
 
 type AnswerRow = Database["public"]["Tables"]["answers"]["Row"];
@@ -17,6 +18,8 @@ type ActiveChat = {
   sessionId: string;
   sessionTitle: string;
   partnerNickname: string;
+  partnerAvatarUrl: string | null;
+  partnerIsPractice: boolean;
 };
 
 export default async function NotificationsPage() {
@@ -107,6 +110,8 @@ export default async function NotificationsPage() {
           sessionId: row.session_id,
           sessionTitle: session.title,
           partnerNickname: partner.nickname,
+          partnerAvatarUrl: partner.avatar_url,
+          partnerIsPractice: partner.is_practice ?? false,
         });
       }
     }
@@ -155,6 +160,8 @@ export default async function NotificationsPage() {
             sessionId: s.id,
             sessionTitle: s.title,
             partnerNickname: author.nickname,
+            partnerAvatarUrl: author.avatar_url,
+            partnerIsPractice: author.is_practice ?? false,
           });
         }
       }
@@ -204,9 +211,12 @@ export default async function NotificationsPage() {
                 href={`/chat/${chat.sessionId}`}
                 style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--card)", border: "1px solid var(--border)", borderRadius: "16px", padding: "14px 16px", textDecoration: "none", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
               >
-                <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "var(--card2)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "16px" }}>
-                  🎵
-                </div>
+                <Avatar
+                  src={chat.partnerAvatarUrl}
+                  alt={chat.partnerNickname}
+                  size="md"
+                  isPractice={chat.partnerIsPractice}
+                />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {chat.partnerNickname}さんと

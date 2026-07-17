@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { insertBlock } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
+import { useBlockStore } from "@/store/blockStore";
 
 interface Props {
   open: boolean;
@@ -23,6 +24,7 @@ const BLOCK_NOTES = [
 ];
 
 export default function BlockConfirmDrawer({ open, onClose, currentUserId, targetUserId, targetNickname, onBlocked }: Props) {
+  const blockStore = useBlockStore();
   const [blocking, setBlocking] = useState(false);
   const [mounted, setMounted] = useState(false);
   const portalRef = useRef<HTMLElement | null>(null);
@@ -42,7 +44,8 @@ export default function BlockConfirmDrawer({ open, onClose, currentUserId, targe
     setBlocking(true);
     try {
       await insertBlock(currentUserId, targetUserId);
-      showToast(`${targetNickname}さんをブロックしました\n視界から消えます。設定から解除できます。`);
+      blockStore.add(targetUserId);
+      showToast(`${targetNickname}さんをブロックしました`);
       onBlocked(targetUserId);
       handleClose();
     } catch {

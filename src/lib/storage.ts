@@ -1,21 +1,55 @@
 import { createClient } from "./supabase";
 
 const BUCKET = "audio";
-const MAX_SIZE_MB = 5;
-const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
-const ALLOWED_TYPES = ["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg"];
+const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_DURATION_SEC = 90;
+
+// ファイル選択: MP3のみ許可
+const ALLOWED_TYPES_FILE = ["audio/mpeg"];
+// 録音: ブラウザが出力する形式をすべて許可 (変換しない方針: CLAUDE.md §7)
+const ALLOWED_TYPES_RECORDING = ["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg"];
+
+export type AudioSource = "file-pick" | "recording";
 
 export type AudioValidationResult =
   | { ok: true }
-  | { ok: false; error: "type" | "size"; size?: number };
+  | { ok: false; error: "type" }
+  | { ok: false; error: "size"; size: number }
+  | { ok: false; error: "duration"; duration: number }
+  | { ok: false; error: "unreadable" };
 
-export function validateAudioFile(file: File): AudioValidationResult {
-  if (!ALLOWED_TYPES.includes(file.type)) {
+function getAudioDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const audio = document.createElement("audio");
+    const url = URL.createObjectURL(file);
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(audio.duration); };
+    audio.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load failed")); };
+    audio.src = url;
+  });
+}
+
+export async function validateAudioFile(
+  file: File,
+  source: AudioSource = "file-pick"
+): Promise<AudioValidationResult> {
+  const allowedTypes = source === "recording" ? ALLOWED_TYPES_RECORDING : ALLOWED_TYPES_FILE;
+  // 録音時は type が空になることもある(Blob→File 変換時の一部ブラウザ)
+  const typeOk = allowedTypes.includes(file.type) || (source === "recording" && !file.type);
+  if (!typeOk) {
     return { ok: false, error: "type" };
   }
   if (file.size > MAX_SIZE_BYTES) {
     const sizeMB = Math.round((file.size / 1024 / 1024) * 10) / 10;
     return { ok: false, error: "size", size: sizeMB };
+  }
+  try {
+    const duration = await getAudioDuration(file);
+    if (duration > MAX_DURATION_SEC) {
+      return { ok: false, error: "duration", duration };
+    }
+  } catch {
+    return { ok: false, error: "unreadable" };
   }
   return { ok: true };
 }

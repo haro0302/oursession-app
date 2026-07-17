@@ -14,6 +14,8 @@ type Stage =
   | "success"
   | "error-type"
   | "error-size"
+  | "error-duration"
+  | "error-unreadable"
   | "error-upload"
   | "error-permission";
 
@@ -21,16 +23,19 @@ interface Props {
   userId: string;
   sessionId: string;
   onUploaded: (url: string) => void;
+  onRemoved?: () => void;
 }
 
-export default function AudioUploader({ userId, sessionId, onUploaded }: Props) {
+export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved }: Props) {
   const [stage, setStage] = useState<Stage>("idle");
   const [progress, setProgress] = useState(0);
   const [countdown, setCountdown] = useState(3);
   const [recDuration, setRecDuration] = useState(0);
   const [errorSize, setErrorSize] = useState<number | undefined>();
+  const [errorDuration, setErrorDuration] = useState<number | undefined>();
   const [previewUrl, setPreviewUrl] = useState("");
   const [uploadedUrl, setUploadedUrl] = useState("");
+  const [uploadedFileName, setUploadedFileName] = useState("");
   const [waveform, setWaveform] = useState<number[]>(Array(32).fill(4));
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -137,30 +142,42 @@ export default function AudioUploader({ userId, sessionId, onUploaded }: Props) 
     if (!file) return;
     e.target.value = "";
     setStage("validating");
-    const result = validateAudioFile(file);
+    const result = await validateAudioFile(file, "file-pick");
     if (!result.ok) {
       if (result.error === "type") { setStage("error-type"); return; }
-      setErrorSize(result.size);
-      setStage("error-size");
+      if (result.error === "size") { setErrorSize(result.size); setStage("error-size"); return; }
+      if (result.error === "duration") { setErrorDuration(result.duration); setStage("error-duration"); return; }
+      setStage("error-unreadable");
       return;
     }
-    await upload(file);
+    await upload(file, file.name);
   }
 
   async function handleSendRecording() {
     const blob = blobRef.current;
     if (!blob) return;
     const ext = blob.type.includes("mp4") ? "mp4" : blob.type.includes("ogg") ? "ogg" : "webm";
-    await upload(new File([blob], `recording.${ext}`, { type: blob.type }));
+    const date = new Date().toISOString().slice(0, 10);
+    const fileName = `録音_${date}.${ext}`;
+    const file = new File([blob], fileName, { type: blob.type });
+    setStage("validating");
+    const result = await validateAudioFile(file, "recording");
+    if (!result.ok) {
+      if (result.error === "size") { setErrorSize(result.size); setStage("error-size"); return; }
+      setStage("error-unreadable");
+      return;
+    }
+    await upload(file, fileName);
   }
 
-  async function upload(file: File) {
+  async function upload(file: File, fileName: string) {
     lastFileRef.current = file;
     setStage("uploading");
     setProgress(0);
     try {
       const { url } = await uploadAudio(file, userId, sessionId, setProgress);
       setUploadedUrl(url);
+      setUploadedFileName(fileName);
       setStage("success");
       onUploaded(url);
     } catch (err) {
@@ -170,7 +187,7 @@ export default function AudioUploader({ userId, sessionId, onUploaded }: Props) 
   }
 
   async function retryUpload() {
-    if (lastFileRef.current) await upload(lastFileRef.current);
+    if (lastFileRef.current) await upload(lastFileRef.current, lastFileRef.current.name);
   }
 
   function reset() {
@@ -180,6 +197,8 @@ export default function AudioUploader({ userId, sessionId, onUploaded }: Props) 
     setStage("idle");
     setProgress(0);
     setRecDuration(0);
+    setUploadedFileName("");
+    setErrorDuration(undefined);
     setWaveform(Array(32).fill(4));
   }
 
@@ -189,33 +208,48 @@ export default function AudioUploader({ userId, sessionId, onUploaded }: Props) 
   // ─── idle ───
   if (stage === "idle") return (
     <div>
+      {/* 録音ボタン: カード背景 + 赤枠 + 横並び */}
       <button type="button" onClick={startCountdown} style={{
-        width: "100%", display: "flex", flexDirection: "column",
-        alignItems: "center", gap: "10px", padding: "28px 16px",
-        background: "var(--red)", border: "none", borderRadius: "16px",
-        cursor: "pointer", boxShadow: "0 6px 24px rgba(232,74,95,0.45)",
+        width: "100%", display: "flex", alignItems: "center", gap: "13px",
+        padding: "18px 16px",
+        background: "var(--card)", backdropFilter: "blur(20px)",
+        border: "1px solid var(--red-border)", borderRadius: "18px",
+        cursor: "pointer",
       }}>
-        <div style={{ width: "52px", height: "52px", borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{
+          width: "44px", height: "44px", borderRadius: "50%",
+          background: "var(--red)", flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 4px 14px rgba(232,74,95,0.4)",
+        }}>
           <MicIcon />
         </div>
-        <span style={{ color: "white", fontWeight: 700, fontSize: "15px" }}>録音する</span>
+        <div style={{ flex: 1, textAlign: "left" }}>
+          <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", lineHeight: 1.4, marginBottom: "2px" }}>
+            その場で録音する
+          </div>
+          <div style={{ fontSize: "11px", color: "var(--text2)", lineHeight: 1.5 }}>
+            スマホのマイクで90秒まで
+          </div>
+        </div>
       </button>
 
+      {/* セパレータ */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "14px 0" }}>
         <div style={{ flex: 1, height: "1px", background: "var(--border2)" }} />
         <span style={{ fontSize: "12px", color: "var(--text3)" }}>または</span>
         <div style={{ flex: 1, height: "1px", background: "var(--border2)" }} />
       </div>
 
-      <label style={{ display: "block", cursor: "pointer" }}>
-        <div style={{ padding: "14px", background: "var(--card)", border: "1px solid var(--border2)", borderRadius: "14px", textAlign: "center", fontSize: "14px", fontWeight: 600, color: "var(--text2)" }}>
-          ファイルから選ぶ
+      {/* ファイル選択: 破線囲み・縦並び・中央寄せ */}
+      <label style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", padding: "28px 18px", background: "var(--card)", backdropFilter: "blur(20px)", border: "1.5px dashed var(--border2)", borderRadius: "16px", cursor: "pointer", textAlign: "center" }}>
+        <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "var(--red-bg)", border: "1px solid var(--red-border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <UploadIcon />
         </div>
+        <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)" }}>ファイルから選ぶ</div>
+        <div style={{ fontSize: "11px", color: "var(--text3)" }}>MP3 (90秒・5MBまで)</div>
         <input type="file" accept="audio/mpeg,.mp3" onChange={handleFileSelect} style={{ display: "none" }} />
       </label>
-      <div style={{ fontSize: "11px", color: "var(--text3)", textAlign: "center", marginTop: "6px" }}>
-        MP3 · 5MB以下 · 90秒以内
-      </div>
     </div>
   );
 
@@ -302,13 +336,30 @@ export default function AudioUploader({ userId, sessionId, onUploaded }: Props) 
         <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "rgba(126,200,138,0.15)", border: "1px solid rgba(126,200,138,0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <CheckIcon />
         </div>
-        <span style={{ fontSize: "12px", color: "#7ec88a", fontWeight: 600 }}>音源を受け付けました</span>
+        <span style={{ flex: 1, fontSize: "12px", color: "var(--text2)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {uploadedFileName}
+        </span>
+        <button
+          type="button"
+          onClick={() => { reset(); onRemoved?.(); }}
+          aria-label="音源を削除"
+          style={{ background: "transparent", border: "none", color: "var(--text3)", cursor: "pointer", padding: "2px", display: "flex", flexShrink: 0 }}
+        >
+          <RemoveXIcon />
+        </button>
       </div>
       <AudioPlayer src={uploadedUrl} />
     </div>
   );
 
   // ─── errors ───
+  function fmtDuration(sec: number): string {
+    const s = Math.ceil(sec);
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return m > 0 ? `${m}分${r}秒` : `${s}秒`;
+  }
+
   const errorMap: Record<string, { title: string; body: string; canRetry?: boolean }> = {
     "error-type": {
       title: "いまはMP3だけ送れます",
@@ -317,6 +368,14 @@ export default function AudioUploader({ userId, sessionId, onUploaded }: Props) 
     "error-size": {
       title: `ファイルが少し大きいようです（${errorSize}MB）`,
       body: "5MB以下にしてみてください。",
+    },
+    "error-duration": {
+      title: `音源が少し長いようです（${fmtDuration(errorDuration ?? 0)}）`,
+      body: "90秒以下にしてみてください。",
+    },
+    "error-unreadable": {
+      title: "音源を読み込めませんでした",
+      body: "別のファイルを試してみてください。",
     },
     "error-upload": {
       title: "うまく送れませんでした",
@@ -357,7 +416,7 @@ export default function AudioUploader({ userId, sessionId, onUploaded }: Props) 
 
 function MicIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
       <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
       <line x1="12" y1="19" x2="12" y2="23" />
@@ -366,10 +425,29 @@ function MicIcon() {
   );
 }
 
+function UploadIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  );
+}
+
 function CheckIcon() {
   return (
     <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#7ec88a" strokeWidth="2.2" strokeLinecap="round">
       <polyline points="1.5,6 4.5,9 10.5,3" />
+    </svg>
+  );
+}
+
+function RemoveXIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   );
 }

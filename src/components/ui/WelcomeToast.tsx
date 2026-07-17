@@ -10,6 +10,8 @@ export default function WelcomeToast({ type }: { type: string }) {
     const timer = setTimeout(() => {
       if (type === "returning") {
         showToast("ようこそ🎵 おかえりなさい。");
+      } else if (type === "deleted") {
+        showToast("アカウントを削除しました。ご利用ありがとうございました。");
       }
       router.replace("/timeline");
     }, 100);

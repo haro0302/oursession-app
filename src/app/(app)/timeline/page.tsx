@@ -1,6 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase-server";
-import TimelineList from "@/components/session/TimelineList";
-import WelcomeToast from "@/components/ui/WelcomeToast";
+import TimelineClient from "@/components/session/TimelineClient";
 import type { SessionWithAuthor } from "@/lib/db";
 import type { Database } from "@/types/database";
 
@@ -10,7 +9,7 @@ type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 export default async function TimelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string }>;
+  searchParams: Promise<{ welcome?: string; deleted?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createServerSupabase();
@@ -66,27 +65,11 @@ export default async function TimelinePage({
     .filter((s): s is SessionWithAuthor => s !== null);
 
   return (
-    <main style={{ padding: "0 20px" }}>
-      {params.welcome && <WelcomeToast type={params.welcome} />}
-
-      <div style={{ padding: "10px 4px 14px" }}>
-        <h1
-          style={{
-            fontSize: "22px",
-            fontWeight: 700,
-            color: "var(--text)",
-            letterSpacing: "-0.3px",
-          }}
-        >
-          タイムライン
-        </h1>
-      </div>
-
-      <TimelineList
-        sessions={sessions}
-        savedIds={savedIds}
-        currentUserId={currentUserId}
-      />
-    </main>
+    <TimelineClient
+      sessions={sessions}
+      savedIds={savedIds}
+      currentUserId={currentUserId}
+      welcomeType={params.deleted === "true" ? "deleted" : params.welcome}
+    />
   );
 }

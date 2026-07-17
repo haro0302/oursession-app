@@ -17,7 +17,7 @@ async function redirectAfterAuth(
 
   const profile = result.data as ProfileRow | null;
 
-  if (!profile?.area) {
+  if (!profile?.onboarded_at) {
     return NextResponse.redirect(`${origin}/onboarding`);
   }
   return NextResponse.redirect(`${origin}/timeline?welcome=returning`);

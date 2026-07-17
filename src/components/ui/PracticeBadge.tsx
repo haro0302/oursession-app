@@ -9,15 +9,15 @@ export default function PracticeBadge({ mini = false }: PracticeBadgeProps) {
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: "2px",
-          background: "linear-gradient(135deg, rgba(255,230,80,0.18) 0%, rgba(255,140,60,0.18) 100%)",
-          border: "1px solid rgba(255,160,60,0.35)",
-          borderRadius: "6px",
-          padding: "1px 6px",
-          fontSize: "10px",
-          fontWeight: 600,
-          color: "#ffb347",
+          background: "linear-gradient(135deg, #fff89a 0%, #ff9a5a 100%)",
+          borderRadius: "8px",
+          padding: "2px 8px",
+          fontSize: "9px",
+          fontWeight: 700,
+          color: "#3a2a00",
+          letterSpacing: "0.3px",
           whiteSpace: "nowrap",
+          lineHeight: 1.5,
         }}
       >
         🔰 練習中
@@ -30,15 +30,15 @@ export default function PracticeBadge({ mini = false }: PracticeBadgeProps) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "4px",
-        background: "linear-gradient(135deg, rgba(255,230,80,0.14) 0%, rgba(255,140,60,0.14) 100%)",
-        border: "1px solid rgba(255,160,60,0.35)",
-        borderRadius: "10px",
+        background: "linear-gradient(135deg, #fff89a 0%, #ff9a5a 100%)",
+        borderRadius: "8px",
         padding: "3px 10px",
-        fontSize: "12px",
-        fontWeight: 600,
-        color: "#ffb347",
+        fontSize: "10px",
+        fontWeight: 700,
+        color: "#3a2a00",
+        letterSpacing: "0.3px",
         whiteSpace: "nowrap",
+        lineHeight: 1.5,
       }}
     >
       🔰 練習中

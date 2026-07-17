@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase";
 import Aurora from "@/components/layout/Aurora";
@@ -8,32 +9,46 @@ import FloatingNav from "@/components/layout/FloatingNav";
 import AuthGateDrawer, {
   AuthGateRegistrar,
 } from "@/components/auth/AuthGateDrawer";
-import PostDrawer from "@/components/session/PostDrawer";
 import InstallBanner from "@/components/ui/InstallBanner";
+import ProfileOverlay from "@/components/profile/ProfileOverlay";
+import { ProfileContext } from "@/contexts/ProfileContext";
+import NotificationsOverlay from "@/components/overlay/NotificationsOverlay";
+import { NotificationsContext } from "@/contexts/NotificationsContext";
+import { useProfileStore } from "@/store/profileStore";
+import { useBlockStore } from "@/store/blockStore";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [isPractice, setIsPractice] = useState(true);
   const [authGateOpen, setAuthGateOpen] = useState(false);
-  const [postDrawerOpen, setPostDrawerOpen] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data }) => {
-      setUser(data.user ?? null);
-      if (data.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("is_practice")
-          .eq("id", data.user.id)
-          .maybeSingle();
-        setIsPractice((profile as { is_practice: boolean } | null)?.is_practice ?? true);
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data.user ?? null;
+      setUser(u);
+      if (u) {
+        useProfileStore.getState().refetch(u.id);
+        useBlockStore.getState().fetch(u.id);
+      } else {
+        useProfileStore.getState().clearProfile();
+        useBlockStore.getState().clear();
       }
     });
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        useProfileStore.getState().refetch(u.id);
+        useBlockStore.getState().fetch(u.id);
+      } else {
+        useProfileStore.getState().clearProfile();
+        useBlockStore.getState().clear();
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -45,44 +60,49 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       setAuthGateOpen(true);
       return;
     }
-    setPostDrawerOpen(true);
+    router.push("/post");
   }
 
   return (
-    <div
-      style={{
-        position: "relative",
-        minHeight: "100dvh",
-        background: "var(--bg)",
-        overflow: "hidden",
-      }}
-    >
-      <Aurora />
-      <AuthGateRegistrar onOpen={handleOpenAuthGate} />
+    <ProfileContext.Provider value={{ openProfile: (id) => setProfileUserId(id) }}>
+    <NotificationsContext.Provider value={{ openNotifications: () => setNotificationsOpen(true) }}>
       <div
         style={{
           position: "relative",
-          zIndex: 1,
           minHeight: "100dvh",
-          paddingBottom: "90px",
+          background: "var(--bg)",
+          overflow: "hidden",
         }}
       >
-        {children}
-      </div>
-      <InstallBanner />
-      <FloatingNav onPostClick={handlePostClick} />
-      <AuthGateDrawer
-        open={authGateOpen}
-        onClose={() => setAuthGateOpen(false)}
-      />
-      {user && (
-        <PostDrawer
-          open={postDrawerOpen}
-          onClose={() => setPostDrawerOpen(false)}
-          userId={user.id}
-          isPracticeDefault={isPractice}
+        <Aurora />
+        <AuthGateRegistrar onOpen={handleOpenAuthGate} />
+        <div
+          style={{
+            position: "relative",
+            minHeight: "100dvh",
+            paddingBottom: "90px",
+          }}
+        >
+          {children}
+        </div>
+        <InstallBanner />
+        <FloatingNav onPostClick={handlePostClick} />
+        <ProfileOverlay
+          userId={profileUserId}
+          onClose={() => setProfileUserId(null)}
+          currentUserId={user?.id ?? null}
         />
-      )}
-    </div>
+        <NotificationsOverlay
+          open={notificationsOpen}
+          onClose={() => setNotificationsOpen(false)}
+          currentUserId={user?.id ?? null}
+        />
+        <AuthGateDrawer
+          open={authGateOpen}
+          onClose={() => setAuthGateOpen(false)}
+        />
+      </div>
+    </NotificationsContext.Provider>
+    </ProfileContext.Provider>
   );
 }

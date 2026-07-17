@@ -22,6 +22,7 @@ export interface Database {
           bio: string | null;
           avatar_url: string | null;
           sns_links: Json;
+          onboarded_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -37,6 +38,7 @@ export interface Database {
           bio?: string | null;
           avatar_url?: string | null;
           sns_links?: Json;
+          onboarded_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -52,6 +54,7 @@ export interface Database {
           bio?: string | null;
           avatar_url?: string | null;
           sns_links?: Json;
+          onboarded_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];

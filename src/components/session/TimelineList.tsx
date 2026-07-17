@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import SessionCard from "./SessionCard";
 import AnswerDrawer from "@/components/answer/AnswerDrawer";
 import ReportDrawer from "@/components/report/ReportDrawer";
 import BlockConfirmDrawer from "@/components/report/BlockConfirmDrawer";
 import { openAuthGate } from "@/lib/auth-gate";
 import { addSave, removeSave } from "@/lib/db";
+import { useBlockStore } from "@/store/blockStore";
 import type { SessionWithAuthor } from "@/lib/db";
 import type { Session } from "@/types/database";
 
@@ -20,13 +21,18 @@ type ReportTarget = { userId: string; nickname: string; sessionId: string };
 type BlockTarget = { userId: string; nickname: string };
 
 export default function TimelineList({ sessions, savedIds, currentUserId }: Props) {
+  const { blockedIds } = useBlockStore();
   const [saves, setSaves] = useState<Set<string>>(new Set(savedIds));
   const [answerTarget, setAnswerTarget] = useState<SessionWithAuthor | null>(null);
+  const lastAnswerSession = useRef<SessionWithAuthor | null>(null);
+  if (answerTarget) lastAnswerSession.current = answerTarget;
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [blockTarget, setBlockTarget] = useState<BlockTarget | null>(null);
-  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
-  const visibleSessions = sessions.filter((s) => !blockedUserIds.has(s.author_id));
+  const visibleSessions = sessions.filter(
+    (s) => !blockedIds.has(s.author_id) && !deletedIds.has(s.id)
+  );
 
   async function handleSave(sessionId: string) {
     if (!currentUserId) { openAuthGate(); return; }
@@ -57,8 +63,8 @@ export default function TimelineList({ sessions, savedIds, currentUserId }: Prop
     setBlockTarget({ userId, nickname });
   }
 
-  function handleBlocked(userId: string) {
-    setBlockedUserIds((prev) => new Set(prev).add(userId));
+  function handleDelete(sessionId: string) {
+    setDeletedIds((prev) => new Set(prev).add(sessionId));
   }
 
   if (visibleSessions.length === 0) {
@@ -86,16 +92,17 @@ export default function TimelineList({ sessions, savedIds, currentUserId }: Prop
             onSave={handleSave}
             onReport={handleReport}
             onBlock={handleBlock}
+            onDelete={session.author_id === currentUserId ? handleDelete : undefined}
             isSaved={saves.has(session.id)}
             isOwn={session.author_id === currentUserId}
           />
         ))}
       </div>
 
-      {currentUserId && answerTarget && (
+      {currentUserId && lastAnswerSession.current && (
         <AnswerDrawer
           open={!!answerTarget}
-          session={answerTarget}
+          session={lastAnswerSession.current}
           currentUserId={currentUserId}
           onClose={() => setAnswerTarget(null)}
         />
@@ -118,7 +125,7 @@ export default function TimelineList({ sessions, savedIds, currentUserId }: Prop
           currentUserId={currentUserId}
           targetUserId={blockTarget.userId}
           targetNickname={blockTarget.nickname}
-          onBlocked={handleBlocked}
+          onBlocked={() => setBlockTarget(null)}
         />
       )}
     </>

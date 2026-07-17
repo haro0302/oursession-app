@@ -1,4 +1,8 @@
-import PracticeBadge from "@/components/ui/PracticeBadge";
+"use client";
+
+import { useProfile } from "@/contexts/ProfileContext";
+import { useBlockStore } from "@/store/blockStore";
+import Avatar from "@/components/ui/Avatar";
 import type { Database } from "@/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -7,8 +11,13 @@ interface Props {
   users: Profile[];
 }
 
+
 export default function SimilarUsersSlider({ users }: Props) {
-  if (users.length === 0) {
+  const { openProfile } = useProfile();
+  const { blockedIds } = useBlockStore();
+  const visibleUsers = users.filter((u) => !blockedIds.has(u.id));
+
+  if (visibleUsers.length === 0) {
     return (
       <div style={{ fontSize: "13px", color: "var(--text3)", padding: "16px 0" }}>
         プロフィールのジャンルや楽器を充実させると、似ている人が見つかりやすくなります。
@@ -17,49 +26,74 @@ export default function SimilarUsersSlider({ users }: Props) {
   }
 
   return (
-    <div style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "8px", WebkitOverflowScrolling: "touch" as unknown as undefined }}>
-      {users.map((user) => (
-        <div
+    <div
+      style={{
+        display: "flex",
+        gap: "12px",
+        overflowX: "auto",
+        overflowY: "hidden",
+        marginRight: "-18px",
+        paddingRight: "18px",
+        paddingBottom: "14px",
+        paddingTop: "6px",
+        scrollSnapType: "x proximity",
+        WebkitOverflowScrolling: "touch" as unknown as undefined,
+        msOverflowStyle: "none" as unknown as undefined,
+        scrollbarWidth: "none" as unknown as undefined,
+      }}
+    >
+      {visibleUsers.map((user) => (
+        <button
           key={user.id}
-          style={{ flexShrink: 0, width: "136px", background: "var(--card)", border: "1px solid var(--border)", borderRadius: "16px", padding: "14px 12px", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
+          type="button"
+          onClick={() => openProfile(user.id)}
+          style={{
+            flexShrink: 0,
+            width: "96px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "10px",
+            padding: "14px 8px 12px",
+            background: "var(--card)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid var(--border)",
+            borderRadius: "18px",
+            cursor: "pointer",
+            scrollSnapAlign: "start",
+            transition: "transform 0.18s, border-color 0.18s",
+          }}
         >
-          {/* アバター */}
-          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--card2)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", marginBottom: "8px" }}>
-            🎵
-          </div>
+          <Avatar
+            src={user.avatar_url}
+            alt={user.nickname ?? ""}
+            size="lg"
+            isPractice={user.is_practice ?? false}
+          />
 
           {/* ニックネーム */}
-          <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "var(--text)",
+              textAlign: "center",
+              lineHeight: 1.3,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: "80px",
+            }}
+          >
             {user.nickname}
           </div>
-
-          {/* 練習中バッジ */}
-          {user.is_practice && (
-            <div style={{ marginBottom: "6px" }}>
-              <PracticeBadge mini />
-            </div>
-          )}
-
-          {/* エリア */}
-          {user.area && (
-            <div style={{ fontSize: "10px", color: "var(--text3)", marginBottom: "6px" }}>
-              📍 {user.area}
-            </div>
-          )}
-
-          {/* 楽器チップ（最大3つ） */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "3px" }}>
-            {(user.instruments ?? []).slice(0, 3).map((inst) => (
-              <span
-                key={inst}
-                style={{ background: "var(--card2)", border: "1px solid var(--border)", borderRadius: "6px", padding: "2px 6px", fontSize: "10px", color: "var(--text3)", fontWeight: 500 }}
-              >
-                {inst}
-              </span>
-            ))}
-          </div>
-        </div>
+        </button>
       ))}
+
+      <style>{`
+        button:active { transform: scale(0.97); }
+      `}</style>
     </div>
   );
 }

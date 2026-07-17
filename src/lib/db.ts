@@ -67,6 +67,21 @@ export async function insertSession(data: SessionInsert): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function updateSession(
+  sessionId: string,
+  authorId: string,
+  data: { title: string; body: string | null; tags: string[] }
+): Promise<void> {
+  const { createClient } = await import("@/lib/supabase");
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("sessions")
+    .update(data as unknown as never)
+    .eq("id", sessionId)
+    .eq("author_id", authorId);
+  if (error) throw new Error(error.message);
+}
+
 export async function updateProfile(
   userId: string,
   data: ProfileUpdate

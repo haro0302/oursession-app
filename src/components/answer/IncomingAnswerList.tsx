@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AudioPlayer from "@/components/ui/AudioPlayer";
+import Avatar from "@/components/ui/Avatar";
 import PracticeBadge from "@/components/ui/PracticeBadge";
 import { updateAnswerStatus, insertMessage } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
@@ -47,9 +48,12 @@ export default function IncomingAnswerList({ answers: initial, currentUserId }: 
         >
           <div style={{ padding: "14px 16px 12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-              <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "var(--card2)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "13px" }}>
-                🎵
-              </div>
+              <Avatar
+                src={answer.sender.avatar_url}
+                alt={answer.sender.nickname}
+                size="sm"
+                isPractice={answer.sender.is_practice ?? false}
+              />
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                   <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>
