@@ -296,7 +296,7 @@ export default function SettingsOverlay({ open, onClose, currentUserId }: Props)
               title="ヘルプ・お問い合わせ"
               last
               external
-              onClick={() => { window.location.href = "mailto:support@oursession.com"; }}
+              onClick={() => { window.location.href = "mailto:our-session@zohomail.com"; }}
             />
           </div>
 
