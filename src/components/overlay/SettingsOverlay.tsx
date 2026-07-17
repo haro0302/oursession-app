@@ -294,6 +294,7 @@ export default function SettingsOverlay({ open, onClose, currentUserId }: Props)
             <SettingRow
               icon={<HelpCircle size={15} />}
               title="ヘルプ・お問い合わせ"
+              sub="our-session@zohomail.com"
               last
               external
               onClick={() => { window.location.href = "mailto:our-session@zohomail.com"; }}
