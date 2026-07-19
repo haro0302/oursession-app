@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { UserPlus, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { registerAuthGateOpener } from "@/lib/auth-gate";
 import { showToast } from "@/components/ui/Toast";
+import type { Database } from "@/types/database";
 
-type ViewState = "options" | "email" | "sent";
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+
+type ViewState = "options" | "email" | "code";
 
 interface AuthGateDrawerProps {
   open: boolean;
@@ -14,11 +18,15 @@ interface AuthGateDrawerProps {
 }
 
 export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
+  const router = useRouter();
   const [view, setView] = useState<ViewState>("options");
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [canResend, setCanResend] = useState(false);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [codeError, setCodeError] = useState(false);
   const resendTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
@@ -30,6 +38,9 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
         setSending(false);
         setHasError(false);
         setCanResend(false);
+        setCode("");
+        setVerifying(false);
+        setCodeError(false);
       }, 400);
       return () => clearTimeout(t);
     }
@@ -53,10 +64,7 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
     setHasError(false);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
+    const { error } = await supabase.auth.signInWithOtp({ email });
 
     if (error) {
       setHasError(true);
@@ -64,7 +72,9 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
     } else {
       setSending(false);
       setCanResend(false);
-      setView("sent");
+      setCode("");
+      setCodeError(false);
+      setView("code");
       resendTimer.current = setTimeout(() => setCanResend(true), 10000);
     }
   }
@@ -72,12 +82,45 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
   async function handleResend() {
     if (!canResend) return;
     setCanResend(false);
+    setCodeError(false);
     const supabase = createClient();
-    await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
+    await supabase.auth.signInWithOtp({ email });
     resendTimer.current = setTimeout(() => setCanResend(true), 10000);
+  }
+
+  async function handleCodeSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (code.length !== 6 || verifying) return;
+    setVerifying(true);
+    setCodeError(false);
+
+    const supabase = createClient();
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: "email",
+    });
+
+    if (error || !data.user) {
+      setCodeError(true);
+      setVerifying(false);
+      return;
+    }
+
+    const { data: profileRaw } = await supabase
+      .from("profiles")
+      .select("onboarded_at")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    const profile = profileRaw as Pick<ProfileRow, "onboarded_at"> | null;
+
+    onClose();
+    if (!profile?.onboarded_at) {
+      router.push("/onboarding");
+    } else {
+      router.push("/timeline?welcome=returning");
+    }
+    router.refresh();
   }
 
   return (
@@ -165,15 +208,44 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
           </form>
         )}
 
-        {view === "sent" && (
+        {view === "code" && (
           <div className="auth-sent">
             <div className="auth-sent-emoji">📧</div>
-            <div className="auth-sent-title">メールをご確認ください</div>
+            <div className="auth-sent-title">コードを確認してください</div>
             <div className="auth-sent-body">
               <span className="auth-sent-email">{email}</span><br />
-              にリンクを送りました。<br />
-              届いたメールのリンクをタップしてください。
+              に6桁のコードを送りました。<br />
+              届いたコードを入力してください。
             </div>
+            <form className="auth-email-form" onSubmit={handleCodeSubmit}>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                className="auth-input auth-code-input"
+                placeholder="6桁のコード"
+                autoComplete="one-time-code"
+                autoFocus
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                  setCodeError(false);
+                }}
+              />
+              {codeError && (
+                <div className="auth-email-error">
+                  コードが違うか、期限切れのようです。もう一度お試しください。
+                </div>
+              )}
+              <button
+                type="submit"
+                className={`auth-btn${code.length === 6 && !verifying ? " primary" : ""}`}
+                disabled={code.length !== 6 || verifying}
+              >
+                {verifying ? "確認中…" : "確認する"}
+              </button>
+            </form>
             <button
               type="button"
               className={`auth-sent-resend${canResend ? " active" : ""}`}

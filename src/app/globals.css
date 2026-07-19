@@ -833,6 +833,7 @@ body {
 .auth-input::placeholder { color: var(--text3); }
 .auth-input:focus { border-color: var(--red-border); }
 .auth-email-error { font-size: 13px; color: #d4884a; line-height: 1.4; }
+.auth-code-input { text-align: center; letter-spacing: 8px; font-size: 20px; font-weight: 700; }
 .auth-email-back {
   background: transparent; border: none;
   font-size: 13px; color: var(--text3);
