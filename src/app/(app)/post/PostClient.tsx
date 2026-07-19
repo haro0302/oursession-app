@@ -43,6 +43,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
   const sessionId = useRef(editSession?.id ?? crypto.randomUUID()).current;
 
   const [audioUrl, setAudioUrl] = useState<string | null>(editSession?.audio_url ?? null);
+  const [waveformPeaks, setWaveformPeaks] = useState<number[] | null>(editSession?.waveform_peaks ?? null);
   const [title, setTitle] = useState(editSession?.title ?? "");
   const [body, setBody] = useState(editSession?.body ?? "");
   const [postTags, setPostTags] = useState<Record<FilterKey, string[]>>(
@@ -98,6 +99,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
           title: title.trim(),
           body: body.trim() || null,
           audio_url: audioUrl,
+          waveform_peaks: waveformPeaks,
           is_practice: isPracticeDefault,
           tags,
         });
@@ -334,7 +336,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
                 padding: "14px 16px",
               }}
             >
-              <AudioPlayer src={editSession.audio_url} />
+              <AudioPlayer src={editSession.audio_url} peaks={editSession.waveform_peaks} />
               <div
                 style={{
                   fontSize: "11px",
@@ -350,8 +352,8 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
             <AudioUploader
               userId={userId}
               sessionId={sessionId}
-              onUploaded={(url) => setAudioUrl(url)}
-              onRemoved={() => setAudioUrl(null)}
+              onUploaded={(url, peaks) => { setAudioUrl(url); setWaveformPeaks(peaks ?? null); }}
+              onRemoved={() => { setAudioUrl(null); setWaveformPeaks(null); }}
             />
           )}
         </div>

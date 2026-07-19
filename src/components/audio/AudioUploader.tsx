@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import AudioPlayer from "@/components/ui/AudioPlayer";
-import { validateAudioFile, uploadAudio } from "@/lib/storage";
+import { validateAudioFile, uploadAudio, extractWaveformPeaks } from "@/lib/storage";
 
 type Stage =
   | "idle"
@@ -22,7 +22,7 @@ type Stage =
 interface Props {
   userId: string;
   sessionId: string;
-  onUploaded: (url: string) => void;
+  onUploaded: (url: string, peaks?: number[]) => void;
   onRemoved?: () => void;
 }
 
@@ -36,6 +36,7 @@ export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved
   const [previewUrl, setPreviewUrl] = useState("");
   const [uploadedUrl, setUploadedUrl] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
+  const [uploadedPeaks, setUploadedPeaks] = useState<number[] | undefined>();
   const [waveform, setWaveform] = useState<number[]>(Array(32).fill(4));
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -175,11 +176,15 @@ export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved
     setStage("uploading");
     setProgress(0);
     try {
-      const { url } = await uploadAudio(file, userId, sessionId, setProgress);
+      const [{ url }, peaks] = await Promise.all([
+        uploadAudio(file, userId, sessionId, setProgress),
+        extractWaveformPeaks(file),
+      ]);
       setUploadedUrl(url);
       setUploadedFileName(fileName);
+      setUploadedPeaks(peaks ?? undefined);
       setStage("success");
-      onUploaded(url);
+      onUploaded(url, peaks ?? undefined);
     } catch (err) {
       console.error("[AudioUploader] upload failed:", err);
       setStage("error-upload");
@@ -198,6 +203,7 @@ export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved
     setProgress(0);
     setRecDuration(0);
     setUploadedFileName("");
+    setUploadedPeaks(undefined);
     setErrorDuration(undefined);
     setWaveform(Array(32).fill(4));
   }
@@ -348,7 +354,7 @@ export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved
           <RemoveXIcon />
         </button>
       </div>
-      <AudioPlayer src={uploadedUrl} />
+      <AudioPlayer src={uploadedUrl} peaks={uploadedPeaks} />
     </div>
   );
 

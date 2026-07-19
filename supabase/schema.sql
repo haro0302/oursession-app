@@ -46,6 +46,7 @@ create table if not exists public.sessions (
   title text not null,
   body text,
   audio_url text not null,
+  waveform_peaks jsonb,
   is_practice boolean not null default false,
   tags text[] not null default '{}',
   created_at timestamptz not null default now()
@@ -74,6 +75,7 @@ create table if not exists public.answers (
   session_id uuid not null references public.sessions(id) on delete cascade,
   sender_id uuid not null references public.profiles(id) on delete cascade,
   audio_url text not null,
+  waveform_peaks jsonb,
   message text,
   status text not null default 'pending' check (status in ('pending', 'approved', 'declined')),
   created_at timestamptz not null default now(),

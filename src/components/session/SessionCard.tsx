@@ -231,6 +231,7 @@ export default function SessionCard({
         <AudioPlayer
           src={session.audio_url}
           showListening={listeningCount}
+          peaks={session.waveform_peaks}
         />
       </div>
 

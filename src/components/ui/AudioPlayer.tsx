@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface AudioPlayerProps {
   src: string;
   duration?: number;
   showListening?: number;
+  peaks?: number[] | null;
 }
 
-export default function AudioPlayer({ src, duration, showListening }: AudioPlayerProps) {
+export default function AudioPlayer({ src, duration, showListening, peaks }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalDuration, setTotalDuration] = useState(duration ?? 0);
-  const bars = 52;
+  const bars = peaks && peaks.length > 0 ? peaks.length : 52;
 
   useEffect(() => {
     const audio = new Audio(src);
@@ -51,17 +52,18 @@ export default function AudioPlayer({ src, duration, showListening }: AudioPlaye
     return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   }
 
-  const heights = useRef(
-    Array.from({ length: bars }, (_, i) => {
-      const seed = 2.1;
-      return (
-        4 +
-        Math.abs(
-          Math.sin(seed * i * 0.4 + i * 0.3) * Math.cos(i * 0.18)
-        ) * 22
-      );
-    })
-  );
+  const heights = useMemo(() => {
+    if (peaks && peaks.length > 0) {
+      return peaks.map((p) => 4 + Math.max(0, Math.min(1, p)) * 22);
+    }
+    const seed = 2.1;
+    return Array.from({ length: bars }, (_, i) => (
+      4 +
+      Math.abs(
+        Math.sin(seed * i * 0.4 + i * 0.3) * Math.cos(i * 0.18)
+      ) * 22
+    ));
+  }, [peaks, bars]);
 
   return (
     <div>
@@ -124,7 +126,7 @@ export default function AudioPlayer({ src, duration, showListening }: AudioPlaye
             overflow: "hidden",
           }}
         >
-          {heights.current.map((h, i) => (
+          {heights.map((h, i) => (
             <div
               key={i}
               style={{

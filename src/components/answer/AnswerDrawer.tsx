@@ -17,6 +17,7 @@ interface Props {
 export default function AnswerDrawer({ open, onClose, session, currentUserId }: Props) {
   const answerId = useRef(crypto.randomUUID()).current;
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [waveformPeaks, setWaveformPeaks] = useState<number[] | null>(null);
   const [message, setMessage] = useState("");
   const [messageFocused, setMessageFocused] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -32,6 +33,7 @@ export default function AnswerDrawer({ open, onClose, session, currentUserId }: 
         session_id: session.id,
         sender_id: currentUserId,
         audio_url: audioUrl,
+        waveform_peaks: waveformPeaks,
         message: message.trim(),
       });
       showToast("あなたの音、届きました🎵\n相手が聴いてくれたら、メッセージでつながれます。");
@@ -44,6 +46,7 @@ export default function AnswerDrawer({ open, onClose, session, currentUserId }: 
 
   function resetAndClose() {
     setAudioUrl(null);
+    setWaveformPeaks(null);
     setMessage("");
     setMessageFocused(false);
     setSubmitting(false);
@@ -184,8 +187,8 @@ export default function AnswerDrawer({ open, onClose, session, currentUserId }: 
             <AudioUploader
               userId={currentUserId}
               sessionId={answerId}
-              onUploaded={setAudioUrl}
-              onRemoved={() => setAudioUrl(null)}
+              onUploaded={(url, peaks) => { setAudioUrl(url); setWaveformPeaks(peaks ?? null); }}
+              onRemoved={() => { setAudioUrl(null); setWaveformPeaks(null); }}
             />
           </div>
 

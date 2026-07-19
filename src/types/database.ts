@@ -66,6 +66,7 @@ export interface Database {
           title: string;
           body: string | null;
           audio_url: string;
+          waveform_peaks: number[] | null;
           is_practice: boolean;
           tags: string[];
           created_at: string;
@@ -76,6 +77,7 @@ export interface Database {
           title: string;
           body?: string | null;
           audio_url: string;
+          waveform_peaks?: number[] | null;
           is_practice?: boolean;
           tags?: string[];
           created_at?: string;
@@ -84,6 +86,7 @@ export interface Database {
           title?: string;
           body?: string | null;
           audio_url?: string;
+          waveform_peaks?: number[] | null;
           is_practice?: boolean;
           tags?: string[];
         };
@@ -103,6 +106,7 @@ export interface Database {
           session_id: string;
           sender_id: string;
           audio_url: string;
+          waveform_peaks: number[] | null;
           message: string | null;
           status: "pending" | "approved" | "declined";
           created_at: string;
@@ -112,6 +116,7 @@ export interface Database {
           session_id: string;
           sender_id: string;
           audio_url: string;
+          waveform_peaks?: number[] | null;
           message?: string | null;
           status?: "pending" | "approved" | "declined";
           created_at?: string;

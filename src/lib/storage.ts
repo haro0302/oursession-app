@@ -54,6 +54,49 @@ export async function validateAudioFile(
   return { ok: true };
 }
 
+const WAVEFORM_PEAKS = 52;
+
+// 音源をデコードして波形ピーク配列を作る。失敗しても null を返すだけで例外は投げない
+// (波形は演出であり、これが原因でアップロード自体を止めてはいけない)
+export async function extractWaveformPeaks(
+  file: File,
+  numPeaks: number = WAVEFORM_PEAKS
+): Promise<number[] | null> {
+  try {
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return null;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const ctx = new AudioContextCtor();
+    try {
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      const channelData = audioBuffer.getChannelData(0);
+      const blockSize = Math.max(1, Math.floor(channelData.length / numPeaks));
+
+      const peaks: number[] = [];
+      for (let i = 0; i < numPeaks; i++) {
+        const start = i * blockSize;
+        const end = Math.min(start + blockSize, channelData.length);
+        let sum = 0;
+        for (let j = start; j < end; j++) {
+          sum += Math.abs(channelData[j]);
+        }
+        peaks.push(end > start ? sum / (end - start) : 0);
+      }
+
+      const max = Math.max(...peaks, 0.0001);
+      return peaks.map((p) => Math.round((p / max) * 100) / 100);
+    } finally {
+      await ctx.close();
+    }
+  } catch (err) {
+    console.error("[storage] waveform extraction failed:", err);
+    return null;
+  }
+}
+
 export async function uploadAudio(
   file: File,
   userId: string,

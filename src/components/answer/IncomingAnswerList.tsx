@@ -67,7 +67,7 @@ export default function IncomingAnswerList({ answers: initial, currentUserId }: 
               </div>
             </div>
 
-            <AudioPlayer src={answer.audio_url} />
+            <AudioPlayer src={answer.audio_url} peaks={answer.waveform_peaks} />
 
             {answer.message && (
               <div style={{ marginTop: "10px", fontSize: "13px", color: "var(--text2)", lineHeight: 1.6, padding: "10px 12px", background: "var(--card2)", borderRadius: "10px" }}>
