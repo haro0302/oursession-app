@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, ExternalLink, Bell, User, Slash, Shield, FileText, HelpCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { removeBlock } from "@/lib/db";
@@ -102,6 +103,7 @@ function SettingRow({
 }
 
 export default function SettingsOverlay({ open, onClose, currentUserId }: Props) {
+  const router = useRouter();
   const blockStore = useBlockStore();
   const [blockedEntries, setBlockedEntries] = useState<BlockEntry[]>([]);
   const [blockedExpanded, setBlockedExpanded] = useState(false);
@@ -283,8 +285,8 @@ export default function SettingsOverlay({ open, onClose, currentUserId }: Props)
 
           {/* グループ2: プライバシー・法務 */}
           <div style={GROUP}>
-            <SettingRow icon={<Shield size={15} />} title="プライバシーポリシー" external />
-            <SettingRow icon={<FileText size={15} />} title="利用規約" last external />
+            <SettingRow icon={<Shield size={15} />} title="プライバシーポリシー" onClick={() => router.push("/privacy")} />
+            <SettingRow icon={<FileText size={15} />} title="利用規約" last onClick={() => router.push("/terms")} />
           </div>
 
           <div style={DIVIDER} />
