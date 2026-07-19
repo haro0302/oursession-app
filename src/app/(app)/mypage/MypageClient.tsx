@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import { Settings, ExternalLink } from "lucide-react";
 import { normalizeUsername, soundcloudHref } from "@/lib/sns";
@@ -64,6 +65,7 @@ export default function MypageClient({
   similarUsers,
   userId,
 }: Props) {
+  const router = useRouter();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
   const [sessions, setSessions] = useState(ownSessions);
@@ -390,8 +392,11 @@ export default function MypageClient({
           </span>
         </div>
         {sessions.length === 0 ? (
-          <div
+          <button
+            type="button"
+            onClick={() => router.push("/post")}
             style={{
+              width: "100%",
               background: "var(--card)",
               backdropFilter: "blur(20px)",
               WebkitBackdropFilter: "blur(20px)",
@@ -401,10 +406,12 @@ export default function MypageClient({
               textAlign: "center",
               color: "var(--text3)",
               fontSize: "13px",
+              fontFamily: "inherit",
+              cursor: "pointer",
             }}
           >
             まだセッションカードがありません
-          </div>
+          </button>
         ) : (
           <div>
             {sessions.map((session) => (
