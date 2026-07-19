@@ -164,6 +164,7 @@ export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved
     setStage("validating");
     const result = await validateAudioFile(file, "recording");
     if (!result.ok) {
+      if (result.error === "type") { setStage("error-type"); return; }
       if (result.error === "size") { setErrorSize(result.size); setStage("error-size"); return; }
       setStage("error-unreadable");
       return;

@@ -43,13 +43,17 @@ export async function validateAudioFile(
     const sizeMB = Math.round((file.size / 1024 / 1024) * 10) / 10;
     return { ok: false, error: "size", size: sizeMB };
   }
-  try {
-    const duration = await getAudioDuration(file);
-    if (duration > MAX_DURATION_SEC) {
-      return { ok: false, error: "duration", duration };
+  // 録音は録音中に90秒で自動停止済みのため、Blobメタデータの長さ再チェックは行わない
+  // (MediaRecorder製Blobは <audio>.duration が Infinity/不定になりやすく誤検知の原因になるため)
+  if (source !== "recording") {
+    try {
+      const duration = await getAudioDuration(file);
+      if (duration > MAX_DURATION_SEC) {
+        return { ok: false, error: "duration", duration };
+      }
+    } catch {
+      return { ok: false, error: "unreadable" };
     }
-  } catch {
-    return { ok: false, error: "unreadable" };
   }
   return { ok: true };
 }
