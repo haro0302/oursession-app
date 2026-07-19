@@ -83,6 +83,9 @@ export default function PrivacyPolicyPage() {
           <p className="legal-p">
             アカウントの削除をご希望の場合は、設定画面のアカウント削除機能からお手続きいただけます。削除が完了すると、プロフィール・投稿・アンサー・メッセージ・音源ファイルを含む関連情報は速やかに削除されます。
           </p>
+          <p className="legal-p">
+            退会後の情報は、法令上保存が必要なものを除き、合理的な期間内に削除します。
+          </p>
         </div>
 
         <div className="legal-section">
