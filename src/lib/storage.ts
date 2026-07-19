@@ -34,8 +34,10 @@ export async function validateAudioFile(
   source: AudioSource = "file-pick"
 ): Promise<AudioValidationResult> {
   const allowedTypes = source === "recording" ? ALLOWED_TYPES_RECORDING : ALLOWED_TYPES_FILE;
+  // iOS Safari等はコーデック情報付き("audio/mp4;codecs=mp4a.40.2")で type を返すため、基本型のみで比較
+  const baseType = file.type.split(";")[0].trim();
   // 録音時は type が空になることもある(Blob→File 変換時の一部ブラウザ)
-  const typeOk = allowedTypes.includes(file.type) || (source === "recording" && !file.type);
+  const typeOk = allowedTypes.includes(baseType) || (source === "recording" && !file.type);
   if (!typeOk) {
     return { ok: false, error: "type" };
   }
