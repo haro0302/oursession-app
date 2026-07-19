@@ -6,3 +6,9 @@ export function normalizeUsername(input: string): string {
     .replace(/^https?:\/\/[^/]+\//, "")
     .replace(/\/$/, "");
 }
+
+export function soundcloudHref(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}

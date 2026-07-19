@@ -421,6 +421,7 @@ body {
   width: 100%; background: transparent; border: none; outline: none;
   color: var(--text); font-family: inherit;
   font-size: 14px; line-height: 1.6; resize: none; min-height: 80px; padding: 0;
+  overflow: hidden;
 }
 .pe-textarea::placeholder { color: var(--text3); }
 .pe-counter {

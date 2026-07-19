@@ -16,7 +16,7 @@ interface Props {
 const FILTER_OPTIONS: Record<FilterKey, { title: string; options: string[] }> = {
   instrument: {
     title: "楽器",
-    options: ["ボーカル", "ギター", "ベース", "ドラム", "鍵盤", "ウクレレ", "サックス", "トランペット", "バイオリン", "その他"],
+    options: ["ボーカル", "ギター", "ベース", "ドラム", "ピアノ", "キーボード", "ウクレレ", "サックス", "トランペット", "バイオリン", "和楽器", "その他"],
   },
   genre: {
     title: "ジャンル",

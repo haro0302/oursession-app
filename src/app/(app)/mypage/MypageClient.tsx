@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import { Settings, ExternalLink } from "lucide-react";
-import { normalizeUsername } from "@/lib/sns";
+import { normalizeUsername, soundcloudHref } from "@/lib/sns";
 import Avatar from "@/components/ui/Avatar";
 import PracticeBadge from "@/components/ui/PracticeBadge";
 import SimilarUsersSlider from "@/components/mypage/SimilarUsersSlider";
@@ -71,12 +71,14 @@ export default function MypageClient({
   const instruments = profile?.instruments ?? [];
   const genres = profile?.genres ?? [];
   const favoriteArtists = profile?.favorite_artists ?? [];
+  const favoriteTracks = profile?.favorite_tracks ?? [];
   const sns = (profile?.sns_links ?? {}) as Record<string, string>;
   const hasSns = Object.values(sns).some((v) => !!v);
   const hasInfoCard =
     instruments.length > 0 ||
     genres.length > 0 ||
     favoriteArtists.length > 0 ||
+    favoriteTracks.length > 0 ||
     !!profile?.bio ||
     hasSns;
 
@@ -199,7 +201,7 @@ export default function MypageClient({
               style={{
                 padding: "14px 0",
                 borderBottom:
-                  genres.length > 0 || favoriteArtists.length > 0 || !!profile?.bio || hasSns
+                  genres.length > 0 || favoriteArtists.length > 0 || favoriteTracks.length > 0 || !!profile?.bio || hasSns
                     ? "1px solid var(--border)"
                     : "none",
               }}
@@ -230,7 +232,7 @@ export default function MypageClient({
               style={{
                 padding: "14px 0",
                 borderBottom:
-                  favoriteArtists.length > 0 || !!profile?.bio || hasSns
+                  favoriteArtists.length > 0 || favoriteTracks.length > 0 || !!profile?.bio || hasSns
                     ? "1px solid var(--border)"
                     : "none",
               }}
@@ -260,10 +262,10 @@ export default function MypageClient({
             <div
               style={{
                 padding: "14px 0",
-                borderBottom: !!profile?.bio || hasSns ? "1px solid var(--border)" : "none",
+                borderBottom: favoriteTracks.length > 0 || !!profile?.bio || hasSns ? "1px solid var(--border)" : "none",
               }}
             >
-              <div style={INFO_LBL}>好きなアーティスト・曲</div>
+              <div style={INFO_LBL}>好きなアーティスト</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                 {favoriteArtists.map((a) => (
                   <span
@@ -284,10 +286,38 @@ export default function MypageClient({
               </div>
             </div>
           )}
+          {favoriteTracks.length > 0 && (
+            <div
+              style={{
+                padding: "14px 0",
+                borderBottom: !!profile?.bio || hasSns ? "1px solid var(--border)" : "none",
+              }}
+            >
+              <div style={INFO_LBL}>好きな曲</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                {favoriteTracks.map((t) => (
+                  <span
+                    key={t}
+                    style={{
+                      background: "var(--card2)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "12px",
+                      padding: "5px 11px",
+                      fontSize: "11.5px",
+                      fontWeight: 500,
+                      color: "var(--text2)",
+                    }}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {profile?.bio && (
             <div style={{ padding: "14px 0", borderBottom: hasSns ? "1px solid var(--border)" : "none" }}>
               <div style={INFO_LBL}>自己紹介</div>
-              <div style={{ fontSize: "13px", color: "var(--text2)", lineHeight: 1.75 }}>
+              <div style={{ fontSize: "13px", color: "var(--text2)", lineHeight: 1.75, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                 {profile.bio}
               </div>
             </div>
@@ -324,14 +354,14 @@ export default function MypageClient({
                 )}
                 {sns.soundcloud && (
                   <a
-                    href={`https://soundcloud.com/${normalizeUsername(sns.soundcloud)}`}
+                    href={soundcloudHref(sns.soundcloud)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="sns-link"
-                    aria-label={`SoundCloudの${normalizeUsername(sns.soundcloud)}を新しいタブで開く`}
+                    aria-label={`${profile?.nickname ?? ""}のSoundCloudを新しいタブで開く`}
                   >
                     <div className="sns-icon">☁️</div>
-                    <span className="sns-username">{normalizeUsername(sns.soundcloud)}</span>
+                    <span className="sns-username">{profile?.nickname ?? ""}のSoundCloudへ</span>
                     <ExternalLink size={11} className="sns-external" />
                   </a>
                 )}

@@ -13,8 +13,8 @@ import type { Session } from "@/types/database";
 type FilterKey = "instrument" | "genre" | "area";
 
 const INSTRUMENT_SET = new Set([
-  "ボーカル", "ギター", "ベース", "ドラム", "鍵盤", "ウクレレ",
-  "サックス", "トランペット", "バイオリン", "その他",
+  "ボーカル", "ギター", "ベース", "ドラム", "ピアノ", "キーボード", "ウクレレ",
+  "サックス", "トランペット", "バイオリン", "和楽器", "その他",
 ]);
 const GENRE_SET = new Set([
   "ロック", "J-POP", "ボカロ", "フォーク", "ジャズ", "ファンク",

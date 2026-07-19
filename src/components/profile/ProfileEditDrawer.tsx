@@ -17,7 +17,7 @@ interface Props {
 }
 
 const MAX_TAGS = 10;
-const MAX_BIO = 150;
+const MAX_BIO = 400;
 
 export default function ProfileEditDrawer({ profile }: Props) {
   const router = useRouter();
@@ -53,6 +53,7 @@ export default function ProfileEditDrawer({ profile }: Props) {
   const [trackInputOpen, setTrackInputOpen] = useState(false);
   const [trackInput, setTrackInput] = useState("");
   const trackInputRef = useRef<HTMLInputElement>(null);
+  const bioTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -63,6 +64,17 @@ export default function ProfileEditDrawer({ profile }: Props) {
   useEffect(() => {
     if (trackInputOpen) trackInputRef.current?.focus();
   }, [trackInputOpen]);
+
+  function resizeBioTextarea() {
+    const el = bioTextareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  useEffect(() => {
+    if (open) resizeBioTextarea();
+  }, [open]);
 
   function handleOpen() {
     const sns = (profile.sns_links ?? {}) as Record<string, string>;
@@ -269,9 +281,10 @@ export default function ProfileEditDrawer({ profile }: Props) {
             </div>
             <div className="pe-textarea-wrap">
               <textarea
+                ref={bioTextareaRef}
                 className="pe-textarea"
                 value={bio}
-                onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO))}
+                onChange={(e) => { setBio(e.target.value.slice(0, MAX_BIO)); resizeBioTextarea(); }}
                 placeholder="楽器歴・好きな音楽・セッションでやりたいことなど"
                 rows={3}
               />
@@ -493,7 +506,7 @@ export default function ProfileEditDrawer({ profile }: Props) {
                   className="pe-sns-input"
                   value={snsCloud}
                   onChange={(e) => setSnsCloud(e.target.value)}
-                  placeholder="SoundCloud ユーザー名"
+                  placeholder="SoundCloud ページURL"
                 />
               </div>
             </div>
