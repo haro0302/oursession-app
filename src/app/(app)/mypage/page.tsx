@@ -56,6 +56,7 @@ export default async function MyPage() {
       .from("profiles")
       .select("*")
       .neq("id", userId)
+      .not("onboarded_at", "is", null)
       .limit(50);
     const others = (othersRaw as Profile[] | null) ?? [];
     similarUsers = others
