@@ -40,10 +40,12 @@ export default async function TimelinePage({
 
   let savedIds: string[] = [];
   let blockedIds: string[] = [];
+  let answeredIds: string[] = [];
   if (currentUserId) {
-    const [savesResult, blocksResult] = await Promise.all([
+    const [savesResult, blocksResult, answersResult] = await Promise.all([
       supabase.from("saves").select("session_id").eq("user_id", currentUserId),
       supabase.from("blocks").select("blocked_id").eq("blocker_id", currentUserId),
+      supabase.from("answers").select("session_id").eq("sender_id", currentUserId),
     ]);
     savedIds =
       (savesResult.data as { session_id: string }[] | null)?.map(
@@ -52,6 +54,10 @@ export default async function TimelinePage({
     blockedIds =
       (blocksResult.data as { blocked_id: string }[] | null)?.map(
         (b) => b.blocked_id
+      ) ?? [];
+    answeredIds =
+      (answersResult.data as { session_id: string }[] | null)?.map(
+        (a) => a.session_id
       ) ?? [];
   }
 
@@ -68,6 +74,7 @@ export default async function TimelinePage({
     <TimelineClient
       sessions={sessions}
       savedIds={savedIds}
+      answeredIds={answeredIds}
       currentUserId={currentUserId}
       welcomeType={params.deleted === "true" ? "deleted" : params.welcome}
     />

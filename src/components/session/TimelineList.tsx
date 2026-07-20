@@ -14,15 +14,17 @@ import type { Session } from "@/types/database";
 interface Props {
   sessions: SessionWithAuthor[];
   savedIds: string[];
+  answeredIds: string[];
   currentUserId: string | null;
 }
 
 type ReportTarget = { userId: string; nickname: string; sessionId: string };
 type BlockTarget = { userId: string; nickname: string };
 
-export default function TimelineList({ sessions, savedIds, currentUserId }: Props) {
+export default function TimelineList({ sessions, savedIds, answeredIds, currentUserId }: Props) {
   const { blockedIds } = useBlockStore();
   const [saves, setSaves] = useState<Set<string>>(new Set(savedIds));
+  const [answered, setAnswered] = useState<Set<string>>(new Set(answeredIds));
   const [answerTarget, setAnswerTarget] = useState<SessionWithAuthor | null>(null);
   const lastAnswerSession = useRef<SessionWithAuthor | null>(null);
   if (answerTarget) lastAnswerSession.current = answerTarget;
@@ -49,8 +51,13 @@ export default function TimelineList({ sessions, savedIds, currentUserId }: Prop
 
   function handleAnswer(session: Session) {
     if (!currentUserId) { openAuthGate(); return; }
+    if (answered.has(session.id)) return;
     const full = sessions.find((s) => s.id === session.id);
     if (full) setAnswerTarget(full);
+  }
+
+  function handleAnswered(sessionId: string) {
+    setAnswered((prev) => new Set(prev).add(sessionId));
   }
 
   function handleReport(userId: string, nickname: string, sessionId: string) {
@@ -94,6 +101,7 @@ export default function TimelineList({ sessions, savedIds, currentUserId }: Prop
             onBlock={handleBlock}
             onDelete={session.author_id === currentUserId ? handleDelete : undefined}
             isSaved={saves.has(session.id)}
+            hasAnswered={answered.has(session.id)}
             isOwn={session.author_id === currentUserId}
           />
         ))}
@@ -105,6 +113,7 @@ export default function TimelineList({ sessions, savedIds, currentUserId }: Prop
           session={lastAnswerSession.current}
           currentUserId={currentUserId}
           onClose={() => setAnswerTarget(null)}
+          onSuccess={handleAnswered}
         />
       )}
 

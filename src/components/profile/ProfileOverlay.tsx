@@ -47,6 +47,7 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
   const [blockOpen, setBlockOpen] = useState(false);
 
   const [saves, setSaves] = useState<Set<string>>(new Set());
+  const [answered, setAnswered] = useState<Set<string>>(new Set());
   const [answerTarget, setAnswerTarget] = useState<SessionWithAuthor | null>(null);
   const lastAnswerSession = useRef<SessionWithAuthor | null>(null);
   if (answerTarget) lastAnswerSession.current = answerTarget;
@@ -60,6 +61,7 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
       setProfile(null);
       setSessions([]);
       setSaves(new Set());
+      setAnswered(new Set());
       return;
     }
     setLoading(true);
@@ -70,11 +72,16 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
       currentUserId
         ? supabase.from("saves").select("session_id").eq("user_id", currentUserId)
         : Promise.resolve({ data: [] }),
-    ]).then(([profileRes, sessionsRes, savesRes]) => {
+      currentUserId
+        ? supabase.from("answers").select("session_id").eq("sender_id", currentUserId)
+        : Promise.resolve({ data: [] }),
+    ]).then(([profileRes, sessionsRes, savesRes, answersRes]) => {
       setProfile((profileRes.data as Profile | null) ?? null);
       setSessions((sessionsRes.data as Session[] | null) ?? []);
       const savedIds = ((savesRes.data as { session_id: string }[] | null) ?? []).map((s) => s.session_id);
       setSaves(new Set(savedIds));
+      const answeredIds = ((answersRes.data as { session_id: string }[] | null) ?? []).map((a) => a.session_id);
+      setAnswered(new Set(answeredIds));
       setLoading(false);
     });
   }, [userId]);
@@ -106,8 +113,13 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
 
   function handleAnswer(session: Session) {
     if (!currentUserId) { openAuthGate(); return; }
+    if (answered.has(session.id)) return;
     const full = sessions.find((s) => s.id === session.id);
     if (full && profile) setAnswerTarget({ ...full, author: profile });
+  }
+
+  function handleAnswered(sessionId: string) {
+    setAnswered((prev) => new Set(prev).add(sessionId));
   }
 
   function handleCardReport(uId: string, nickname: string, sessionId: string) {
@@ -586,6 +598,7 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
                           variant={isOwnProfile ? "mypage" : "profile"}
                           isOwn={isOwnProfile}
                           isSaved={saves.has(session.id)}
+                          hasAnswered={answered.has(session.id)}
                           onSave={!isOwnProfile ? handleSave : undefined}
                           onAnswer={!isOwnProfile ? handleAnswer : undefined}
                           onReport={!isOwnProfile ? handleCardReport : undefined}
@@ -633,6 +646,7 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
           session={lastAnswerSession.current}
           currentUserId={currentUserId}
           onClose={() => setAnswerTarget(null)}
+          onSuccess={handleAnswered}
         />
       )}
 

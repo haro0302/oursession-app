@@ -41,7 +41,10 @@ export async function insertAnswer(data: AnswerInsert): Promise<void> {
   const { error } = await supabase
     .from("answers")
     .insert(data as unknown as never);
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === "23505") throw new Error("DUPLICATE_ANSWER");
+    throw new Error(error.message);
+  }
 }
 
 export async function updateAnswerStatus(

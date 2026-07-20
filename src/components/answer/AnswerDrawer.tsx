@@ -12,9 +12,10 @@ interface Props {
   onClose: () => void;
   session: SessionWithAuthor;
   currentUserId: string;
+  onSuccess?: (sessionId: string) => void;
 }
 
-export default function AnswerDrawer({ open, onClose, session, currentUserId }: Props) {
+export default function AnswerDrawer({ open, onClose, session, currentUserId, onSuccess }: Props) {
   const answerId = useRef(crypto.randomUUID()).current;
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [waveformPeaks, setWaveformPeaks] = useState<number[] | null>(null);
@@ -37,8 +38,15 @@ export default function AnswerDrawer({ open, onClose, session, currentUserId }: 
         message: message.trim(),
       });
       showToast("あなたの音、届きました🎵\n相手が聴いてくれたら、メッセージでつながれます。");
+      onSuccess?.(session.id);
       resetAndClose();
-    } catch {
+    } catch (e) {
+      if (e instanceof Error && e.message === "DUPLICATE_ANSWER") {
+        showToast("このカードには、もうアンサーを送っています🎵");
+        onSuccess?.(session.id);
+        resetAndClose();
+        return;
+      }
       showToast("うまく送れませんでした。もう一度お試しください。");
       setSubmitting(false);
     }

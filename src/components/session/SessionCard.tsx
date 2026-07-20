@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bookmark, Send, MoreHorizontal, Flag, Ban, Trash2, Pencil } from "lucide-react";
+import { Bookmark, Send, Check, MoreHorizontal, Flag, Ban, Trash2, Pencil } from "lucide-react";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import Avatar from "@/components/ui/Avatar";
 import PracticeBadge from "@/components/ui/PracticeBadge";
@@ -19,6 +19,7 @@ interface SessionCardProps {
   onBlock?: (userId: string, nickname: string) => void;
   onDelete?: (sessionId: string) => void;
   isSaved?: boolean;
+  hasAnswered?: boolean;
   listeningCount?: number;
   isOwn?: boolean;
   variant?: "timeline" | "mypage" | "profile";
@@ -32,6 +33,7 @@ export default function SessionCard({
   onBlock,
   onDelete,
   isSaved = false,
+  hasAnswered = false,
   listeningCount,
   isOwn = false,
   variant = "timeline",
@@ -424,26 +426,28 @@ export default function SessionCard({
           {/* アンサーボタン */}
           <button
             type="button"
-            onClick={() => onAnswer?.(session)}
+            onClick={() => !hasAnswered && onAnswer?.(session)}
+            disabled={hasAnswered}
+            aria-label={hasAnswered ? "アンサー済み" : "アンサー"}
             style={{
               display: "flex",
               alignItems: "center",
               gap: "5px",
-              background: "var(--red)",
-              border: "none",
+              background: hasAnswered ? "var(--card2)" : "var(--red)",
+              border: hasAnswered ? "1px solid var(--border)" : "none",
               borderRadius: "14px",
               padding: "7px 14px",
               fontSize: "12px",
               fontWeight: 700,
-              color: "white",
-              cursor: "pointer",
-              boxShadow: "0 3px 10px rgba(232,74,95,0.35)",
+              color: hasAnswered ? "var(--text3)" : "white",
+              cursor: hasAnswered ? "not-allowed" : "pointer",
+              boxShadow: hasAnswered ? "none" : "0 3px 10px rgba(232,74,95,0.35)",
               transition: "transform 0.15s",
               flexShrink: 0,
             }}
           >
-            <Send size={13} strokeWidth={2.4} />
-            <span>アンサー</span>
+            {hasAnswered ? <Check size={13} strokeWidth={2.4} /> : <Send size={13} strokeWidth={2.4} />}
+            <span>{hasAnswered ? "アンサー済み" : "アンサー"}</span>
           </button>
         </div>
       )}
@@ -522,17 +526,23 @@ export default function SessionCard({
             </button>
             <button
               type="button"
-              onClick={() => onAnswer?.(session)}
+              onClick={() => !hasAnswered && onAnswer?.(session)}
+              disabled={hasAnswered}
+              aria-label={hasAnswered ? "アンサー済み" : "アンサー"}
               style={{
                 display: "flex", alignItems: "center", gap: "5px",
-                background: "var(--red)", border: "none", borderRadius: "14px",
-                padding: "7px 14px", fontSize: "12px", fontWeight: 700, color: "white",
-                cursor: "pointer", boxShadow: "0 3px 10px rgba(232,74,95,0.35)",
+                background: hasAnswered ? "var(--card2)" : "var(--red)",
+                border: hasAnswered ? "1px solid var(--border)" : "none",
+                borderRadius: "14px",
+                padding: "7px 14px", fontSize: "12px", fontWeight: 700,
+                color: hasAnswered ? "var(--text3)" : "white",
+                cursor: hasAnswered ? "not-allowed" : "pointer",
+                boxShadow: hasAnswered ? "none" : "0 3px 10px rgba(232,74,95,0.35)",
                 transition: "transform 0.15s", flexShrink: 0,
               }}
             >
-              <Send size={13} strokeWidth={2.4} />
-              <span>アンサー</span>
+              {hasAnswered ? <Check size={13} strokeWidth={2.4} /> : <Send size={13} strokeWidth={2.4} />}
+              <span>{hasAnswered ? "アンサー済み" : "アンサー"}</span>
             </button>
           </div>
         </>

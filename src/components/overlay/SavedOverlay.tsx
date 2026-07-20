@@ -22,6 +22,7 @@ export default function SavedOverlay({ open, onClose, currentUserId }: Props) {
   const { blockedIds } = useBlockStore();
   const [sessions, setSessions] = useState<SessionWithAuthor[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -29,12 +30,18 @@ export default function SavedOverlay({ open, onClose, currentUserId }: Props) {
     setLoading(true);
     const supabase = createClient();
     (async () => {
-      const { data: savesRaw } = await supabase
-        .from("saves")
-        .select("session_id")
-        .eq("user_id", currentUserId);
+      const [savesResult, answersResult] = await Promise.all([
+        supabase.from("saves").select("session_id").eq("user_id", currentUserId),
+        supabase.from("answers").select("session_id").eq("sender_id", currentUserId),
+      ]);
+      const savesRaw = savesResult.data;
       const ids = (savesRaw as { session_id: string }[] | null)?.map((s) => s.session_id) ?? [];
       setSavedIds(ids);
+      setAnsweredIds(
+        new Set(
+          (answersResult.data as { session_id: string }[] | null)?.map((a) => a.session_id) ?? []
+        )
+      );
       if (ids.length === 0) { setSessions([]); setLoading(false); return; }
 
       const { data: sessionsRaw } = await supabase
@@ -206,6 +213,7 @@ export default function SavedOverlay({ open, onClose, currentUserId }: Props) {
                   key={session.id}
                   session={session}
                   isSaved={savedIds.includes(session.id)}
+                  hasAnswered={answeredIds.has(session.id)}
                   onSave={handleSave}
                   isOwn={session.author_id === currentUserId}
                 />

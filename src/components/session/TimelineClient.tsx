@@ -13,11 +13,12 @@ type FilterState = Record<FilterKey, string[]>;
 interface Props {
   sessions: SessionWithAuthor[];
   savedIds: string[];
+  answeredIds: string[];
   currentUserId: string | null;
   welcomeType?: string;
 }
 
-export default function TimelineClient({ sessions, savedIds, currentUserId, welcomeType }: Props) {
+export default function TimelineClient({ sessions, savedIds, answeredIds, currentUserId, welcomeType }: Props) {
   const [filterState, setFilterState] = useState<FilterState>({ instrument: [], genre: [], area: [] });
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [filterKey, setFilterKey] = useState<FilterKey | null>(null);
@@ -62,6 +63,7 @@ export default function TimelineClient({ sessions, savedIds, currentUserId, welc
         <TimelineList
           sessions={filteredSessions}
           savedIds={savedIds}
+          answeredIds={answeredIds}
           currentUserId={currentUserId}
         />
       </main>
