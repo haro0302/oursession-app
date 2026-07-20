@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useBlockStore } from "@/store/blockStore";
+import { useNotificationStore } from "@/store/notificationStore";
 import Avatar from "@/components/ui/Avatar";
 import type { MsgRow } from "./page";
 
@@ -67,7 +69,12 @@ export default function MessagesClient({ rows, currentUserId: _ }: Props) {
   const router = useRouter();
   const { openProfile } = useProfile();
   const { blockedIds } = useBlockStore();
+  const markAllRead = useNotificationStore((s) => s.markAllRead);
   const visibleRows = rows.filter((r) => !blockedIds.has(r.partnerUserId));
+
+  useEffect(() => {
+    markAllRead();
+  }, [markAllRead]);
 
   const previewClass = (state: MsgRow["previewState"]) => {
     if (state === "alert") return "msg-preview msg-preview-alert";

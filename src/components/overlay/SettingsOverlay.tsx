@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, ExternalLink, Bell, User, Slash, Shield, FileText, HelpCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, User, Slash, Shield, FileText, HelpCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { removeBlock } from "@/lib/db";
 import LogoutButton from "@/components/profile/LogoutButton";
@@ -222,7 +222,6 @@ export default function SettingsOverlay({ open, onClose, currentUserId }: Props)
 
           {/* グループ1: 通知・アカウント・ブロック */}
           <div style={GROUP}>
-            <SettingRow icon={<Bell size={15} />} title="通知" sub="アンサー・メッセージの通知" />
             <SettingRow icon={<User size={15} />} title="アカウント情報" sub="メールアドレス・Google連携" onClick={() => setAccountInfoOpen(true)} />
             {/* ブロックしたユーザー（アコーディオン） */}
             <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>

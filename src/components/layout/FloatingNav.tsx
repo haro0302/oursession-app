@@ -4,6 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Plus, MessageSquare, User } from "lucide-react";
+import { useNotificationStore } from "@/store/notificationStore";
+import { useBlockStore } from "@/store/blockStore";
+import { getUnreadCount } from "@/lib/notifications";
 
 interface FloatingNavProps {
   onPostClick?: () => void;
@@ -23,8 +26,12 @@ function getIndicatorX(pathname: string): number {
 export default function FloatingNav({ onPostClick }: FloatingNavProps) {
   const pathname = usePathname();
   const [bouncing, setBouncing] = useState<string | null>(null);
+  const { notifs, readAt } = useNotificationStore();
+  const { blockedIds } = useBlockStore();
 
   const indicatorX = getIndicatorX(pathname);
+  const unreadCount = getUnreadCount(notifs, readAt, blockedIds);
+  const unreadLabel = unreadCount > 9 ? "9+" : String(unreadCount);
 
   function isActive(key: string) {
     if (key === "timeline") return pathname === "/" || pathname.startsWith("/timeline");
@@ -123,11 +130,36 @@ export default function FloatingNav({ onPostClick }: FloatingNavProps) {
       {/* メッセージ */}
       <Link
         href="/messages"
-        aria-label="メッセージ"
+        aria-label={unreadCount > 0 ? `メッセージ(未読${unreadLabel}件)` : "メッセージ"}
         onClick={() => bounce("messages")}
         style={itemStyle("messages")}
       >
         <MessageSquare size={20} strokeWidth={isActive("messages") ? 2.5 : 1.8} />
+        {unreadCount > 0 && (
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: "3px",
+              right: "3px",
+              minWidth: "15px",
+              height: "15px",
+              padding: "0 3px",
+              borderRadius: "8px",
+              background: "var(--red)",
+              color: "white",
+              fontSize: "9px",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "2px solid var(--bg)",
+              zIndex: 4,
+            }}
+          >
+            {unreadLabel}
+          </span>
+        )}
       </Link>
 
       {/* マイページ */}

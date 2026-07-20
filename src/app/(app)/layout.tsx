@@ -16,6 +16,9 @@ import NotificationsOverlay from "@/components/overlay/NotificationsOverlay";
 import { NotificationsContext } from "@/contexts/NotificationsContext";
 import { useProfileStore } from "@/store/profileStore";
 import { useBlockStore } from "@/store/blockStore";
+import { useNotificationStore } from "@/store/notificationStore";
+
+const NOTIF_POLL_INTERVAL_MS = 60_000;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -32,9 +35,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (u) {
         useProfileStore.getState().refetch(u.id);
         useBlockStore.getState().fetch(u.id);
+        useNotificationStore.getState().fetch(u.id);
       } else {
         useProfileStore.getState().clearProfile();
         useBlockStore.getState().clear();
+        useNotificationStore.getState().clear();
       }
     });
     const {
@@ -45,13 +50,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (u) {
         useProfileStore.getState().refetch(u.id);
         useBlockStore.getState().fetch(u.id);
+        useNotificationStore.getState().fetch(u.id);
       } else {
         useProfileStore.getState().clearProfile();
         useBlockStore.getState().clear();
+        useNotificationStore.getState().clear();
       }
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(() => {
+      useNotificationStore.getState().fetch(user.id);
+    }, NOTIF_POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [user]);
 
   const handleOpenAuthGate = useCallback(() => setAuthGateOpen(true), []);
 
