@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { useBlockStore } from "@/store/blockStore";
+import Avatar from "@/components/ui/Avatar";
 import type { Database } from "@/types/database";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -19,6 +20,7 @@ interface DerivedNotif {
   type: NotifType;
   fromUserId: string;
   fromNickname: string;
+  fromAvatarUrl: string | null;
   contextTitle: string;
   contextId: string;
   createdAt: string;
@@ -63,14 +65,6 @@ function isYesterday(iso: string): boolean {
 }
 
 // ---- アイコン SVG ----
-function UserIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
 function MailBadgeIcon() {
   return (
     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -158,17 +152,7 @@ function NotifRow({ item, isUnread, onClick }: { item: DerivedNotif; isUnread: b
 
       {/* アイコン + バッジ */}
       <div style={{ position: "relative", flexShrink: 0 }}>
-        <div style={{
-          width: "36px",
-          height: "36px",
-          borderRadius: "50%",
-          background: "linear-gradient(135deg, #4a4a55 0%, #2a2a32 100%)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-          <UserIcon />
-        </div>
+        <Avatar src={item.fromAvatarUrl} alt={item.fromNickname} size="sm" />
         <div style={{
           position: "absolute",
           bottom: "-2px",
@@ -276,14 +260,14 @@ export default function NotificationsOverlay({ open, onClose, currentUserId }: P
       const rawPending = (pendingAnswers as Pick<AnswerRow, "id" | "session_id" | "sender_id" | "created_at">[] | null) ?? [];
       const senderIds = [...new Set(rawPending.map((a) => a.sender_id))];
 
-      let profileMap = new Map<string, Pick<ProfileRow, "id" | "nickname">>();
+      let profileMap = new Map<string, Pick<ProfileRow, "id" | "nickname" | "avatar_url">>();
       if (senderIds.length > 0) {
         const { data: profilesRaw } = await supabase
           .from("profiles")
-          .select("id, nickname")
+          .select("id, nickname, avatar_url")
           .in("id", senderIds);
         profileMap = new Map(
-          ((profilesRaw as Pick<ProfileRow, "id" | "nickname">[] | null) ?? []).map((p) => [p.id, p])
+          ((profilesRaw as Pick<ProfileRow, "id" | "nickname" | "avatar_url">[] | null) ?? []).map((p) => [p.id, p])
         );
       }
 
@@ -295,6 +279,7 @@ export default function NotificationsOverlay({ open, onClose, currentUserId }: P
           type: "answer",
           fromUserId: a.sender_id,
           fromNickname: profile.nickname,
+          fromAvatarUrl: profile.avatar_url,
           contextTitle: sessionTitleMap.get(a.session_id) ?? "",
           contextId: a.session_id,
           createdAt: a.created_at,
@@ -326,14 +311,14 @@ export default function NotificationsOverlay({ open, onClose, currentUserId }: P
       approvedSessions = (approvedSessionsRaw as ApprovedSession[] | null) ?? [];
       const authorIds = [...new Set(approvedSessions.map((s) => s.author_id))];
 
-      let authorMap = new Map<string, Pick<ProfileRow, "id" | "nickname">>();
+      let authorMap = new Map<string, Pick<ProfileRow, "id" | "nickname" | "avatar_url">>();
       if (authorIds.length > 0) {
         const { data: authorsRaw } = await supabase
           .from("profiles")
-          .select("id, nickname")
+          .select("id, nickname, avatar_url")
           .in("id", authorIds);
         authorMap = new Map(
-          ((authorsRaw as Pick<ProfileRow, "id" | "nickname">[] | null) ?? []).map((p) => [p.id, p])
+          ((authorsRaw as Pick<ProfileRow, "id" | "nickname" | "avatar_url">[] | null) ?? []).map((p) => [p.id, p])
         );
       }
 
@@ -348,6 +333,7 @@ export default function NotificationsOverlay({ open, onClose, currentUserId }: P
           type: "approved",
           fromUserId: sess.author_id,
           fromNickname: author.nickname,
+          fromAvatarUrl: author.avatar_url,
           contextTitle: sess.title,
           contextId: a.session_id,
           createdAt: a.created_at,
@@ -373,14 +359,14 @@ export default function NotificationsOverlay({ open, onClose, currentUserId }: P
       const msgs = (messagesRaw as Pick<MessageRow, "id" | "session_id" | "sender_id" | "body" | "created_at">[] | null) ?? [];
       const msgSenderIds = [...new Set(msgs.map((m) => m.sender_id))];
 
-      let senderNicknameMap = new Map<string, string>();
+      let senderProfileMap = new Map<string, Pick<ProfileRow, "id" | "nickname" | "avatar_url">>();
       if (msgSenderIds.length > 0) {
         const { data: sendersRaw } = await supabase
           .from("profiles")
-          .select("id, nickname")
+          .select("id, nickname, avatar_url")
           .in("id", msgSenderIds);
-        senderNicknameMap = new Map(
-          ((sendersRaw as Pick<ProfileRow, "id" | "nickname">[] | null) ?? []).map((p) => [p.id, p.nickname])
+        senderProfileMap = new Map(
+          ((sendersRaw as Pick<ProfileRow, "id" | "nickname" | "avatar_url">[] | null) ?? []).map((p) => [p.id, p])
         );
       }
 
@@ -394,13 +380,14 @@ export default function NotificationsOverlay({ open, onClose, currentUserId }: P
       for (const m of msgs) {
         if (seenSessions.has(m.session_id)) continue;
         seenSessions.add(m.session_id);
-        const nick = senderNicknameMap.get(m.sender_id) ?? "不明";
+        const senderProfile = senderProfileMap.get(m.sender_id);
         const titleOrBody = m.body.slice(0, 40);
         results.push({
           id: `message-${m.id}`,
           type: "message",
           fromUserId: m.sender_id,
-          fromNickname: nick,
+          fromNickname: senderProfile?.nickname ?? "不明",
+          fromAvatarUrl: senderProfile?.avatar_url ?? null,
           contextTitle: titleOrBody,
           contextId: m.session_id,
           createdAt: m.created_at,
