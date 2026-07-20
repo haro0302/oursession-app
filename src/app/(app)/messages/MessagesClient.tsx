@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useBlockStore } from "@/store/blockStore";
 import { useNotificationStore } from "@/store/notificationStore";
+import { fetchOtherPartyMessages } from "@/lib/chatActivity";
+import { getChatReadAt } from "@/lib/chatReads";
 import Avatar from "@/components/ui/Avatar";
 import type { MsgRow } from "./page";
 
@@ -12,6 +14,13 @@ interface Props {
   rows: MsgRow[];
   currentUserId: string;
 }
+
+interface SessionStats {
+  latestAt: string;
+  unreadCount: number;
+}
+
+const MESSAGE_POLL_INTERVAL_MS = 60_000;
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -65,16 +74,43 @@ function RoleMark({ role }: { role: MsgRow["role"] }) {
   );
 }
 
-export default function MessagesClient({ rows, currentUserId: _ }: Props) {
+export default function MessagesClient({ rows, currentUserId }: Props) {
   const router = useRouter();
   const { openProfile } = useProfile();
   const { blockedIds } = useBlockStore();
   const markAllRead = useNotificationStore((s) => s.markAllRead);
+  const [messageStats, setMessageStats] = useState<Map<string, SessionStats>>(new Map());
   const visibleRows = rows.filter((r) => !blockedIds.has(r.partnerUserId));
 
   useEffect(() => {
     markAllRead();
   }, [markAllRead]);
+
+  useEffect(() => {
+    const sessionIds = rows.map((r) => r.sessionId);
+    let cancelled = false;
+
+    async function load() {
+      const events = await fetchOtherPartyMessages(currentUserId, sessionIds);
+      if (cancelled) return;
+      const stats = new Map<string, SessionStats>();
+      for (const e of events) {
+        const entry = stats.get(e.sessionId) ?? { latestAt: e.createdAt, unreadCount: 0 };
+        if (e.createdAt > entry.latestAt) entry.latestAt = e.createdAt;
+        const readAt = getChatReadAt(e.sessionId);
+        if (!readAt || new Date(e.createdAt) > readAt) entry.unreadCount++;
+        stats.set(e.sessionId, entry);
+      }
+      setMessageStats(stats);
+    }
+
+    load();
+    const id = setInterval(load, MESSAGE_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [rows, currentUserId]);
 
   const previewClass = (state: MsgRow["previewState"]) => {
     if (state === "alert") return "msg-preview msg-preview-alert";
@@ -82,6 +118,22 @@ export default function MessagesClient({ rows, currentUserId: _ }: Props) {
     if (state === "empty") return "msg-preview msg-preview-empty";
     return "msg-preview";
   };
+
+  const sortedRows = visibleRows
+    .map((row) => {
+      const stats = messageStats.get(row.sessionId);
+      const unreadCount = stats?.unreadCount ?? 0;
+      const effectiveTime = stats && stats.latestAt > row.rawTime ? stats.latestAt : row.rawTime;
+      const badge = row.badge + unreadCount;
+      let previewText = row.previewText;
+      let previewState = row.previewState;
+      if (unreadCount > 0 && row.badge === 0) {
+        previewText = `新着メッセージ · ${unreadCount}件`;
+        previewState = "alert";
+      }
+      return { ...row, effectiveTime, badge, previewText, previewState };
+    })
+    .sort((a, b) => (a.effectiveTime > b.effectiveTime ? -1 : 1));
 
   return (
     <div className="msg-page">
@@ -107,7 +159,7 @@ export default function MessagesClient({ rows, currentUserId: _ }: Props) {
       )}
 
       <div className="msg-list">
-        {visibleRows.map((row) => (
+        {sortedRows.map((row) => (
           <div
             key={`${row.role}-${row.sessionId}`}
             role="button"
@@ -144,7 +196,7 @@ export default function MessagesClient({ rows, currentUserId: _ }: Props) {
             <div className="msg-body">
               <div className="msg-row-top">
                 <div className="msg-row-title">{row.sessionTitle}</div>
-                <div className="msg-row-time">{timeAgo(row.rawTime)}</div>
+                <div className="msg-row-time">{timeAgo(row.effectiveTime)}</div>
               </div>
               <div className="msg-row-bottom">
                 <div className={previewClass(row.previewState)}>{row.previewText}</div>

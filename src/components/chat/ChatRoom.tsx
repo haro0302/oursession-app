@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { insertMessage } from "@/lib/db";
+import { markChatRead } from "@/lib/chatReads";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import type { MessageWithSender, PendingAnswerWithSender } from "@/app/chat/[sessionId]/page";
 import type { Database } from "@/types/database";
@@ -77,6 +78,11 @@ export default function ChatRoom({
 
   useEffect(() => {
     if (role === "pending") return;
+    markChatRead(sessionId);
+  }, [sessionId, role]);
+
+  useEffect(() => {
+    if (role === "pending") return;
     const channel = supabase
       .channel(`chat:${sessionId}`)
       .on(
@@ -96,6 +102,7 @@ export default function ChatRoom({
               return [...prev, { ...newMsg, sender: profileRaw as ProfileRow }];
             });
           }
+          markChatRead(sessionId);
         }
       )
       .subscribe();
