@@ -119,6 +119,28 @@ export async function insertReport(data: ReportInsert): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+type SchedulePollInsert = Database["public"]["Tables"]["schedule_polls"]["Insert"];
+
+export async function insertSchedulePoll(data: SchedulePollInsert): Promise<void> {
+  const { createClient } = await import("@/lib/supabase");
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("schedule_polls")
+    .insert(data as unknown as never);
+  if (error) throw new Error(error.message);
+}
+
+type SchedulePollResponseInsert = Database["public"]["Tables"]["schedule_poll_responses"]["Insert"];
+
+export async function upsertSchedulePollResponse(data: SchedulePollResponseInsert): Promise<void> {
+  const { createClient } = await import("@/lib/supabase");
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("schedule_poll_responses")
+    .upsert(data as unknown as never, { onConflict: "poll_id,user_id" });
+  if (error) throw new Error(error.message);
+}
+
 export async function insertBlock(blockerId: string, blockedId: string): Promise<void> {
   const { createClient } = await import("@/lib/supabase");
   const supabase = createClient();

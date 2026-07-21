@@ -174,6 +174,75 @@ export interface Database {
           }
         ];
       };
+      schedule_polls: {
+        Row: {
+          id: string;
+          session_id: string;
+          created_by: string;
+          candidates: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          created_by: string;
+          candidates: Json;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [
+          {
+            foreignKeyName: "schedule_polls_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "schedule_polls_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      schedule_poll_responses: {
+        Row: {
+          poll_id: string;
+          session_id: string;
+          user_id: string;
+          answers: Json;
+          updated_at: string;
+        };
+        Insert: {
+          poll_id: string;
+          session_id: string;
+          user_id: string;
+          answers: Json;
+          updated_at?: string;
+        };
+        Update: {
+          answers?: Json;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "schedule_poll_responses_poll_id_session_id_fkey";
+            columns: ["poll_id", "session_id"];
+            isOneToOne: false;
+            referencedRelation: "schedule_polls";
+            referencedColumns: ["id", "session_id"];
+          },
+          {
+            foreignKeyName: "schedule_poll_responses_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       saves: {
         Row: {
           user_id: string;
@@ -250,3 +319,11 @@ export type Session = Database["public"]["Tables"]["sessions"]["Row"];
 export type Answer = Database["public"]["Tables"]["answers"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type Save = Database["public"]["Tables"]["saves"]["Row"];
+export type SchedulePoll = Database["public"]["Tables"]["schedule_polls"]["Row"];
+export type SchedulePollResponse = Database["public"]["Tables"]["schedule_poll_responses"]["Row"];
+
+export type ScheduleAnswerValue = "ok" | "maybe" | "no";
+export interface ScheduleCandidate {
+  id: string;
+  iso: string;
+}

@@ -1,15 +1,21 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase-server";
 import ChatRoom from "@/components/chat/ChatRoom";
-import type { Database } from "@/types/database";
+import type { Database, ScheduleAnswerValue, ScheduleCandidate } from "@/types/database";
 
 type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 type AnswerRow = Database["public"]["Tables"]["answers"]["Row"];
+type SchedulePollRow = Database["public"]["Tables"]["schedule_polls"]["Row"];
+type SchedulePollResponseRow = Database["public"]["Tables"]["schedule_poll_responses"]["Row"];
 
 export type MessageWithSender = MessageRow & { sender: ProfileRow };
 export type PendingAnswerWithSender = AnswerRow & { sender: ProfileRow };
+export type SchedulePollWithResponses = Omit<SchedulePollRow, "candidates"> & {
+  candidates: ScheduleCandidate[];
+  responses: Record<string, Record<string, ScheduleAnswerValue>>; // userId -> candidateId -> answer
+};
 
 export default async function ChatPage({
   params,
@@ -35,10 +41,11 @@ export default async function ChatPage({
 
   const { data: authorProfileRaw } = await supabase
     .from("profiles")
-    .select("nickname")
+    .select("*")
     .eq("id", session.author_id)
     .maybeSingle();
-  const authorNickname = (authorProfileRaw as Pick<ProfileRow, "nickname"> | null)?.nickname ?? "";
+  const authorProfile = authorProfileRaw as ProfileRow | null;
+  const authorNickname = authorProfile?.nickname ?? "";
 
   const isAuthor = session.author_id === currentUserId;
 
@@ -107,13 +114,29 @@ export default async function ChatPage({
       .filter((a): a is PendingAnswerWithSender => a !== null);
   }
 
-  // 承認済みアンサー数（メンバー人数用）
-  const { data: approvedCountRaw } = await supabase
+  // 承認済み参加者（ホスト + 承認済みアンサー送信者）のプロフィール一覧
+  const { data: approvedAnswersRaw } = await supabase
     .from("answers")
-    .select("id")
+    .select("*")
     .eq("session_id", sessionId)
     .eq("status", "approved");
-  const memberCount = ((approvedCountRaw as { id: string }[] | null) ?? []).length + 1;
+  const approvedSenderIds = [
+    ...new Set(((approvedAnswersRaw as AnswerRow[] | null) ?? []).map((a) => a.sender_id)),
+  ];
+
+  let approvedSenderProfiles: ProfileRow[] = [];
+  if (approvedSenderIds.length > 0) {
+    const { data: approvedSendersRaw } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("id", approvedSenderIds);
+    approvedSenderProfiles = (approvedSendersRaw as ProfileRow[] | null) ?? [];
+  }
+
+  const members: ProfileRow[] = authorProfile
+    ? [authorProfile, ...approvedSenderProfiles]
+    : approvedSenderProfiles;
+  const memberCount = members.length;
 
   // メッセージ取得（RLSで承認済み参加者のみ）
   let messages: MessageWithSender[] = [];
@@ -157,6 +180,39 @@ export default async function ChatPage({
       .filter((m): m is MessageWithSender => m !== null);
   }
 
+  // 日程調整ポーリング取得（RLSで承認済み参加者のみ）
+  let schedulePolls: SchedulePollWithResponses[] = [];
+  if (role !== "pending") {
+    const { data: pollsRaw } = await supabase
+      .from("schedule_polls")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("created_at", { ascending: true });
+
+    const rawPolls = (pollsRaw as SchedulePollRow[] | null) ?? [];
+
+    if (rawPolls.length > 0) {
+      const pollIds = rawPolls.map((p) => p.id);
+      const { data: responsesRaw } = await supabase
+        .from("schedule_poll_responses")
+        .select("*")
+        .in("poll_id", pollIds);
+
+      const rawResponses = (responsesRaw as SchedulePollResponseRow[] | null) ?? [];
+      const responsesByPoll = new Map<string, Record<string, Record<string, ScheduleAnswerValue>>>();
+      for (const r of rawResponses) {
+        if (!responsesByPoll.has(r.poll_id)) responsesByPoll.set(r.poll_id, {});
+        responsesByPoll.get(r.poll_id)![r.user_id] = r.answers as Record<string, ScheduleAnswerValue>;
+      }
+
+      schedulePolls = rawPolls.map((p) => ({
+        ...p,
+        candidates: p.candidates as unknown as ScheduleCandidate[],
+        responses: responsesByPoll.get(p.id) ?? {},
+      }));
+    }
+  }
+
   return (
     <ChatRoom
       sessionId={sessionId}
@@ -168,6 +224,8 @@ export default async function ChatPage({
       role={role}
       pendingAnswers={pendingAnswers}
       initialMemberCount={memberCount}
+      members={members}
+      initialSchedulePolls={schedulePolls}
     />
   );
 }

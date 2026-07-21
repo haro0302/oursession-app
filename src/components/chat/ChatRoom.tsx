@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { createClient } from "@/lib/supabase";
@@ -8,23 +8,16 @@ import { insertMessage } from "@/lib/db";
 import { markChatRead } from "@/lib/chatReads";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import Avatar from "@/components/ui/Avatar";
-import type { MessageWithSender, PendingAnswerWithSender } from "@/app/chat/[sessionId]/page";
-import type { Database } from "@/types/database";
+import SchedulePollSetupSheet from "@/components/chat/SchedulePollSetupSheet";
+import SchedulePollCard from "@/components/chat/SchedulePollCard";
+import { timeAgo } from "@/lib/time";
+import type { MessageWithSender, PendingAnswerWithSender, SchedulePollWithResponses } from "@/app/chat/[sessionId]/page";
+import type { Database, ScheduleAnswerValue } from "@/types/database";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return "たった今";
-  if (min < 60) return `${min}分前`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}時間前`;
-  const day = Math.floor(hr / 24);
-  if (day === 1) return "昨日";
-  return `${day}日前`;
-}
+type SchedulePollRow = Database["public"]["Tables"]["schedule_polls"]["Row"];
+type SchedulePollResponseRow = Database["public"]["Tables"]["schedule_poll_responses"]["Row"];
 
 interface Props {
   sessionId: string;
@@ -36,6 +29,8 @@ interface Props {
   role: "host" | "guest" | "pending";
   pendingAnswers: PendingAnswerWithSender[];
   initialMemberCount: number;
+  members: ProfileRow[];
+  initialSchedulePolls: SchedulePollWithResponses[];
 }
 
 export default function ChatRoom({
@@ -48,9 +43,13 @@ export default function ChatRoom({
   role,
   pendingAnswers: initialPendingAnswers,
   initialMemberCount,
+  members,
+  initialSchedulePolls,
 }: Props) {
   const router = useRouter();
   const [messages, setMessages] = useState<MessageWithSender[]>(initialMessages);
+  const [schedulePolls, setSchedulePolls] = useState<SchedulePollWithResponses[]>(initialSchedulePolls);
+  const [pollSheetOpen, setPollSheetOpen] = useState(false);
   const [pendingAnswers, setPendingAnswers] = useState<PendingAnswerWithSender[]>(initialPendingAnswers);
   const [deferredAnswers, setDeferredAnswers] = useState<PendingAnswerWithSender[]>([]);
   const [pendingBarExpanded, setPendingBarExpanded] = useState(false);
@@ -66,7 +65,7 @@ export default function ChatRoom({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, schedulePolls]);
 
   useEffect(() => {
     if (role === "pending") return;
@@ -95,6 +94,38 @@ export default function ChatRoom({
             });
           }
           markChatRead(sessionId);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "schedule_polls", filter: `session_id=eq.${sessionId}` },
+        (payload) => {
+          const newPoll = payload.new as SchedulePollRow;
+          setSchedulePolls((prev) => {
+            if (prev.some((p) => p.id === newPoll.id)) return prev;
+            return [
+              ...prev,
+              {
+                ...newPoll,
+                candidates: newPoll.candidates as unknown as SchedulePollWithResponses["candidates"],
+                responses: {},
+              },
+            ];
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "schedule_poll_responses", filter: `session_id=eq.${sessionId}` },
+        (payload) => {
+          const row = payload.new as SchedulePollResponseRow;
+          setSchedulePolls((prev) =>
+            prev.map((p) =>
+              p.id === row.poll_id
+                ? { ...p, responses: { ...p.responses, [row.user_id]: row.answers as Record<string, ScheduleAnswerValue> } }
+                : p
+            )
+          );
         }
       )
       .subscribe();
@@ -159,6 +190,18 @@ export default function ChatRoom({
 
   const isInputVisible = role !== "pending";
   const isQuickReplyVisible = chatVisible && role !== "pending";
+
+  type FeedItem =
+    | { kind: "message"; createdAt: string; data: MessageWithSender }
+    | { kind: "poll"; createdAt: string; data: SchedulePollWithResponses };
+
+  const feed = useMemo<FeedItem[]>(() => {
+    const items: FeedItem[] = [
+      ...messages.map((m): FeedItem => ({ kind: "message", createdAt: m.created_at, data: m })),
+      ...schedulePolls.map((p): FeedItem => ({ kind: "poll", createdAt: p.created_at, data: p })),
+    ];
+    return items.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [messages, schedulePolls]);
 
   return (
     <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", background: "var(--bg)" }}>
@@ -370,12 +413,24 @@ export default function ChatRoom({
         {/* メッセージスレッド */}
         {chatVisible && (
           <div style={{ padding: "0 16px" }}>
-            {messages.length === 0 && (
+            {feed.length === 0 && (
               <div style={{ textAlign: "center", color: "var(--text3)", fontSize: "12px", padding: "20px 0" }}>
                 最初のメッセージを送りましょう
               </div>
             )}
-            {messages.map((msg) => {
+            {feed.map((item) => {
+              if (item.kind === "poll") {
+                return (
+                  <SchedulePollCard
+                    key={`poll-${item.data.id}`}
+                    poll={item.data}
+                    members={members}
+                    currentUserId={currentUserId}
+                  />
+                );
+              }
+
+              const msg = item.data;
               const isSystem = msg.body.includes("会えそうですね");
               const isMine = msg.sender_id === currentUserId;
 
@@ -508,7 +563,7 @@ export default function ChatRoom({
           {[
             { label: "挨拶する", disabled: false, onClick: () => setGreetingOpen((v) => !v) },
             { label: "担当は?", disabled: false, onClick: sendPartPoll },
-            { label: "日程は?", disabled: true, onClick: () => {} },
+            { label: "日程は?", disabled: false, onClick: () => setPollSheetOpen(true) },
             { label: "スタジオは?", disabled: true, onClick: () => {} },
           ].map((chip) => (
             <button
@@ -601,6 +656,13 @@ export default function ChatRoom({
           </button>
         </div>
       )}
+
+      <SchedulePollSetupSheet
+        open={pollSheetOpen}
+        onClose={() => setPollSheetOpen(false)}
+        sessionId={sessionId}
+        currentUserId={currentUserId}
+      />
     </div>
   );
 }
