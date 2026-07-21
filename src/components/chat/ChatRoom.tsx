@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase";
 import { insertMessage } from "@/lib/db";
 import { markChatRead } from "@/lib/chatReads";
 import AudioPlayer from "@/components/ui/AudioPlayer";
+import Avatar from "@/components/ui/Avatar";
 import type { MessageWithSender, PendingAnswerWithSender } from "@/app/chat/[sessionId]/page";
 import type { Database } from "@/types/database";
 
@@ -23,15 +24,6 @@ function timeAgo(iso: string): string {
   const day = Math.floor(hr / 24);
   if (day === 1) return "昨日";
   return `${day}日前`;
-}
-
-function UserIconSmall({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
 }
 
 interface Props {
@@ -418,21 +410,7 @@ export default function ChatRoom({
                   }}
                 >
                   {!isMine && (
-                    <div
-                      style={{
-                        width: "26px",
-                        height: "26px",
-                        borderRadius: "50%",
-                        background: "linear-gradient(135deg, #3b3b46 0%, #1f1f28 100%)",
-                        border: "1px solid var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <UserIconSmall size={12} />
-                    </div>
+                    <Avatar src={msg.sender.avatar_url} alt={msg.sender.nickname} size="sm" />
                   )}
                   <div style={{ maxWidth: "80%" }}>
                     {!isMine && (
@@ -652,21 +630,7 @@ function AnswerCard({
     >
       {/* ヘッド: アバター + 名前 + 楽器 + 時間 */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-        <div
-          style={{
-            width: "38px",
-            height: "38px",
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #3b3b46 0%, #1f1f28 100%)",
-            border: "1px solid var(--border)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <UserIconSmall />
-        </div>
+        <Avatar src={answer.sender.avatar_url} alt={answer.sender.nickname} size="md" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>
