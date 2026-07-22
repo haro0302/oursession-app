@@ -103,11 +103,12 @@ create policy "answers: session author status update"
 
 
 -- ============================================================
--- 4. messages（承認済みセッションのチャット）
+-- 4. messages（1対1チャットルーム。ルームの正体は answer_id）
 -- ============================================================
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references public.sessions(id) on delete cascade,
+  answer_id uuid not null references public.answers(id) on delete cascade,
+  session_id uuid not null references public.sessions(id) on delete cascade, -- answer_id からの非正規化コピー(トリガーで自動補完)
   sender_id uuid not null references public.profiles(id) on delete cascade,
   body text not null,
   created_at timestamptz not null default now()
@@ -115,99 +116,147 @@ create table if not exists public.messages (
 
 alter table public.messages enable row level security;
 
--- 承認済みアンサーに関与している人のみ読み書き可
-create policy "messages: approved participants read"
+-- session_id はクライアントに送らせず、answer_id から自動補完する
+create or replace function public.messages_set_session_id()
+returns trigger language plpgsql as $$
+begin
+  select session_id into new.session_id from public.answers where id = new.answer_id;
+  return new;
+end;
+$$;
+
+create trigger messages_set_session_id
+  before insert on public.messages
+  for each row execute procedure public.messages_set_session_id();
+
+-- ルーム(=承認済みアンサー)の当事者2人だけが読み書き可
+create policy "messages: room participants read"
   on public.messages for select using (
-    auth.uid() in (
-      select sender_id from public.answers
-      where session_id = messages.session_id and status = 'approved'
-      union
-      select author_id from public.sessions where id = messages.session_id
+    exists (
+      select 1 from public.answers a
+      join public.sessions s on s.id = a.session_id
+      where a.id = messages.answer_id
+        and a.status = 'approved'
+        and (auth.uid() = a.sender_id or auth.uid() = s.author_id)
     )
   );
 
-create policy "messages: approved participants insert"
+create policy "messages: room participants insert"
   on public.messages for insert with check (
     auth.uid() = sender_id
-    and auth.uid() in (
-      select sender_id from public.answers
-      where session_id = messages.session_id and status = 'approved'
-      union
-      select author_id from public.sessions where id = messages.session_id
+    and exists (
+      select 1 from public.answers a
+      join public.sessions s on s.id = a.session_id
+      where a.id = messages.answer_id
+        and a.status = 'approved'
+        and (auth.uid() = a.sender_id or auth.uid() = s.author_id)
     )
   );
+
+create index if not exists messages_answer_id_idx on public.messages (answer_id);
 
 
 -- ============================================================
--- 4b. schedule_polls / schedule_poll_responses（日程調整ポーリング）
+-- 4b. schedule_polls / schedule_poll_responses（日程調整ポーリング、ルーム=answer_id単位）
 -- ============================================================
 create table if not exists public.schedule_polls (
   id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references public.sessions(id) on delete cascade,
+  answer_id uuid not null references public.answers(id) on delete cascade,
+  session_id uuid not null references public.sessions(id) on delete cascade, -- answer_id からの非正規化コピー(トリガーで自動補完)
   created_by uuid not null references public.profiles(id) on delete cascade,
   candidates jsonb not null check (jsonb_array_length(candidates) <= 6), -- [{id, iso}]
   created_at timestamptz not null default now(),
-  unique (id, session_id)
+  unique (id, answer_id)
 );
 
 create table if not exists public.schedule_poll_responses (
   poll_id uuid not null,
-  session_id uuid not null, -- schedule_polls.session_id の非正規化コピー(Realtimeのfilterは列でしか絞れないため)
+  answer_id uuid not null, -- schedule_polls.answer_id の非正規化コピー(Realtimeのfilterは列でしか絞れないため)
+  session_id uuid not null, -- 同上(表示用の非正規化コピー)
   user_id uuid not null references public.profiles(id) on delete cascade,
   answers jsonb not null, -- { [candidateId]: "ok" | "maybe" | "no" }
   updated_at timestamptz not null default now(),
   primary key (poll_id, user_id),
-  -- (poll_id, session_id) の複合FKで、クライアントが偽のsession_idを付けて
-  -- 別セッションのpoll_idに書き込むことをDBレベルで防ぐ
-  foreign key (poll_id, session_id) references public.schedule_polls (id, session_id) on delete cascade
+  -- (poll_id, answer_id) の複合FKで、クライアントが偽のanswer_idを付けて
+  -- 別ルームのpoll_idに書き込むことをDBレベルで防ぐ
+  foreign key (poll_id, answer_id) references public.schedule_polls (id, answer_id) on delete cascade
 );
 
-create index if not exists schedule_polls_session_id_idx on public.schedule_polls (session_id);
-create index if not exists schedule_poll_responses_session_id_idx on public.schedule_poll_responses (session_id);
+create index if not exists schedule_polls_answer_id_idx on public.schedule_polls (answer_id);
+create index if not exists schedule_poll_responses_answer_id_idx on public.schedule_poll_responses (answer_id);
 
 alter table public.schedule_polls enable row level security;
 alter table public.schedule_poll_responses enable row level security;
 
--- 承認済み参加者のみ読み書き可(messagesテーブルと同じ述語)
-create policy "schedule_polls: approved participants read"
+-- session_id はクライアントに送らせず自動補完する
+create or replace function public.schedule_polls_set_session_id()
+returns trigger language plpgsql as $$
+begin
+  select session_id into new.session_id from public.answers where id = new.answer_id;
+  return new;
+end;
+$$;
+
+create trigger schedule_polls_set_session_id
+  before insert on public.schedule_polls
+  for each row execute procedure public.schedule_polls_set_session_id();
+
+create or replace function public.schedule_poll_responses_set_session_id()
+returns trigger language plpgsql as $$
+begin
+  select session_id into new.session_id from public.schedule_polls where id = new.poll_id;
+  return new;
+end;
+$$;
+
+create trigger schedule_poll_responses_set_session_id
+  before insert on public.schedule_poll_responses
+  for each row execute procedure public.schedule_poll_responses_set_session_id();
+
+-- ルーム(=承認済みアンサー)の当事者2人のみ読み書き可(messagesテーブルと同じ述語)
+create policy "schedule_polls: room participants read"
   on public.schedule_polls for select using (
-    auth.uid() in (
-      select sender_id from public.answers
-      where session_id = schedule_polls.session_id and status = 'approved'
-      union
-      select author_id from public.sessions where id = schedule_polls.session_id
+    exists (
+      select 1 from public.answers a
+      join public.sessions s on s.id = a.session_id
+      where a.id = schedule_polls.answer_id
+        and a.status = 'approved'
+        and (auth.uid() = a.sender_id or auth.uid() = s.author_id)
     )
   );
 
-create policy "schedule_polls: approved participants insert"
+create policy "schedule_polls: room participants insert"
   on public.schedule_polls for insert with check (
     auth.uid() = created_by
-    and auth.uid() in (
-      select sender_id from public.answers
-      where session_id = schedule_polls.session_id and status = 'approved'
-      union
-      select author_id from public.sessions where id = schedule_polls.session_id
+    and exists (
+      select 1 from public.answers a
+      join public.sessions s on s.id = a.session_id
+      where a.id = schedule_polls.answer_id
+        and a.status = 'approved'
+        and (auth.uid() = a.sender_id or auth.uid() = s.author_id)
     )
   );
 
-create policy "schedule_poll_responses: approved participants read"
+create policy "schedule_poll_responses: room participants read"
   on public.schedule_poll_responses for select using (
-    auth.uid() in (
-      select sender_id from public.answers
-      where session_id = schedule_poll_responses.session_id and status = 'approved'
-      union
-      select author_id from public.sessions where id = schedule_poll_responses.session_id
+    exists (
+      select 1 from public.answers a
+      join public.sessions s on s.id = a.session_id
+      where a.id = schedule_poll_responses.answer_id
+        and a.status = 'approved'
+        and (auth.uid() = a.sender_id or auth.uid() = s.author_id)
     )
   );
 
-create policy "schedule_poll_responses: approved participants insert"
+create policy "schedule_poll_responses: room participants insert"
   on public.schedule_poll_responses for insert with check (
     auth.uid() = user_id
-    and auth.uid() in (
-      select sender_id from public.answers
-      where session_id = schedule_poll_responses.session_id and status = 'approved'
-      union
-      select author_id from public.sessions where id = schedule_poll_responses.session_id
+    and exists (
+      select 1 from public.answers a
+      join public.sessions s on s.id = a.session_id
+      where a.id = schedule_poll_responses.answer_id
+        and a.status = 'approved'
+        and (auth.uid() = a.sender_id or auth.uid() = s.author_id)
     )
   );
 

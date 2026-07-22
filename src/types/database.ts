@@ -144,6 +144,7 @@ export interface Database {
       messages: {
         Row: {
           id: string;
+          answer_id: string;
           session_id: string;
           sender_id: string;
           body: string;
@@ -151,13 +152,21 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          session_id: string;
+          answer_id: string;
+          session_id?: string;
           sender_id: string;
           body: string;
           created_at?: string;
         };
         Update: Record<string, never>;
         Relationships: [
+          {
+            foreignKeyName: "messages_answer_id_fkey";
+            columns: ["answer_id"];
+            isOneToOne: false;
+            referencedRelation: "answers";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "messages_session_id_fkey";
             columns: ["session_id"];
@@ -177,6 +186,7 @@ export interface Database {
       schedule_polls: {
         Row: {
           id: string;
+          answer_id: string;
           session_id: string;
           created_by: string;
           candidates: Json;
@@ -184,13 +194,21 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          session_id: string;
+          answer_id: string;
+          session_id?: string;
           created_by: string;
           candidates: Json;
           created_at?: string;
         };
         Update: Record<string, never>;
         Relationships: [
+          {
+            foreignKeyName: "schedule_polls_answer_id_fkey";
+            columns: ["answer_id"];
+            isOneToOne: false;
+            referencedRelation: "answers";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "schedule_polls_session_id_fkey";
             columns: ["session_id"];
@@ -210,6 +228,7 @@ export interface Database {
       schedule_poll_responses: {
         Row: {
           poll_id: string;
+          answer_id: string;
           session_id: string;
           user_id: string;
           answers: Json;
@@ -217,7 +236,8 @@ export interface Database {
         };
         Insert: {
           poll_id: string;
-          session_id: string;
+          answer_id: string;
+          session_id?: string;
           user_id: string;
           answers: Json;
           updated_at?: string;
@@ -228,11 +248,11 @@ export interface Database {
         };
         Relationships: [
           {
-            foreignKeyName: "schedule_poll_responses_poll_id_session_id_fkey";
-            columns: ["poll_id", "session_id"];
+            foreignKeyName: "schedule_poll_responses_poll_id_answer_id_fkey";
+            columns: ["poll_id", "answer_id"];
             isOneToOne: false;
             referencedRelation: "schedule_polls";
-            referencedColumns: ["id", "session_id"];
+            referencedColumns: ["id", "answer_id"];
           },
           {
             foreignKeyName: "schedule_poll_responses_user_id_fkey";

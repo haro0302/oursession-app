@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { insertMessage } from "@/lib/db";
 import { markChatRead } from "@/lib/chatReads";
@@ -11,7 +11,7 @@ import Avatar from "@/components/ui/Avatar";
 import SchedulePollSetupSheet from "@/components/chat/SchedulePollSetupSheet";
 import SchedulePollCard from "@/components/chat/SchedulePollCard";
 import { timeAgo } from "@/lib/time";
-import type { MessageWithSender, PendingAnswerWithSender, SchedulePollWithResponses } from "@/app/chat/[sessionId]/page";
+import type { MessageWithSender, PendingAnswerWithSender, SchedulePollWithResponses } from "@/app/chat/[answerId]/page";
 import type { Database, ScheduleAnswerValue } from "@/types/database";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -20,29 +20,29 @@ type SchedulePollRow = Database["public"]["Tables"]["schedule_polls"]["Row"];
 type SchedulePollResponseRow = Database["public"]["Tables"]["schedule_poll_responses"]["Row"];
 
 interface Props {
-  sessionId: string;
+  answerId: string;
   sessionTitle: string;
   sessionAudioUrl: string | null;
   sessionAuthorNickname: string;
+  partnerNickname: string;
   initialMessages: MessageWithSender[];
   currentUserId: string;
   role: "host" | "guest" | "pending";
-  pendingAnswers: PendingAnswerWithSender[];
-  initialMemberCount: number;
+  pendingAnswer: PendingAnswerWithSender | null;
   members: ProfileRow[];
   initialSchedulePolls: SchedulePollWithResponses[];
 }
 
 export default function ChatRoom({
-  sessionId,
+  answerId,
   sessionTitle,
   sessionAudioUrl,
   sessionAuthorNickname,
+  partnerNickname,
   initialMessages,
   currentUserId,
   role,
-  pendingAnswers: initialPendingAnswers,
-  initialMemberCount,
+  pendingAnswer: initialPendingAnswer,
   members,
   initialSchedulePolls,
 }: Props) {
@@ -50,13 +50,8 @@ export default function ChatRoom({
   const [messages, setMessages] = useState<MessageWithSender[]>(initialMessages);
   const [schedulePolls, setSchedulePolls] = useState<SchedulePollWithResponses[]>(initialSchedulePolls);
   const [pollSheetOpen, setPollSheetOpen] = useState(false);
-  const [pendingAnswers, setPendingAnswers] = useState<PendingAnswerWithSender[]>(initialPendingAnswers);
-  const [deferredAnswers, setDeferredAnswers] = useState<PendingAnswerWithSender[]>([]);
-  const [pendingBarExpanded, setPendingBarExpanded] = useState(false);
-  const [chatVisible, setChatVisible] = useState(
-    role !== "host" || initialMemberCount > 1
-  );
-  const [memberCount, setMemberCount] = useState(initialMemberCount);
+  const [pendingAnswer, setPendingAnswer] = useState<PendingAnswerWithSender | null>(initialPendingAnswer);
+  const [chatVisible, setChatVisible] = useState(role !== "host" || !initialPendingAnswer);
   const [greetingOpen, setGreetingOpen] = useState(false);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -69,16 +64,16 @@ export default function ChatRoom({
 
   useEffect(() => {
     if (role === "pending") return;
-    markChatRead(sessionId);
-  }, [sessionId, role]);
+    markChatRead(answerId);
+  }, [answerId, role]);
 
   useEffect(() => {
     if (role === "pending") return;
     const channel = supabase
-      .channel(`chat:${sessionId}`)
+      .channel(`chat:${answerId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `session_id=eq.${sessionId}` },
+        { event: "INSERT", schema: "public", table: "messages", filter: `answer_id=eq.${answerId}` },
         async (payload) => {
           const newMsg = payload.new as MessageRow;
           const { data: profileRaw } = await supabase
@@ -93,12 +88,12 @@ export default function ChatRoom({
               return [...prev, { ...newMsg, sender: profileRaw as ProfileRow }];
             });
           }
-          markChatRead(sessionId);
+          markChatRead(answerId);
         }
       )
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "schedule_polls", filter: `session_id=eq.${sessionId}` },
+        { event: "INSERT", schema: "public", table: "schedule_polls", filter: `answer_id=eq.${answerId}` },
         (payload) => {
           const newPoll = payload.new as SchedulePollRow;
           setSchedulePolls((prev) => {
@@ -116,7 +111,7 @@ export default function ChatRoom({
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "schedule_poll_responses", filter: `session_id=eq.${sessionId}` },
+        { event: "*", schema: "public", table: "schedule_poll_responses", filter: `answer_id=eq.${answerId}` },
         (payload) => {
           const row = payload.new as SchedulePollResponseRow;
           setSchedulePolls((prev) =>
@@ -130,18 +125,15 @@ export default function ChatRoom({
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [sessionId, role]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [answerId, role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleApprove(answer: PendingAnswerWithSender) {
     await supabase.from("answers").update({ status: "approved" } as unknown as never).eq("id", answer.id);
-    const remaining = pendingAnswers.filter((a) => a.id !== answer.id);
-    setDeferredAnswers((prev) => [...prev, ...remaining]);
-    setPendingAnswers([]);
+    setPendingAnswer(null);
     setChatVisible(true);
-    setMemberCount((n) => n + 1);
     try {
       await insertMessage({
-        session_id: sessionId,
+        answer_id: answerId,
         sender_id: currentUserId,
         body: `${answer.sender.nickname}さんと、会えそうですね 🎵`,
       });
@@ -150,9 +142,8 @@ export default function ChatRoom({
     }
   }
 
-  function handleSkip(answer: PendingAnswerWithSender) {
-    setPendingAnswers((prev) => prev.filter((a) => a.id !== answer.id));
-    setDeferredAnswers((prev) => [...prev, answer]);
+  function handleSkip() {
+    router.back();
   }
 
   async function handleSend() {
@@ -161,7 +152,7 @@ export default function ChatRoom({
     setSending(true);
     setBody("");
     try {
-      await insertMessage({ session_id: sessionId, sender_id: currentUserId, body: trimmed });
+      await insertMessage({ answer_id: answerId, sender_id: currentUserId, body: trimmed });
     } catch {
       setBody(trimmed);
     } finally {
@@ -173,7 +164,7 @@ export default function ChatRoom({
     setGreetingOpen(false);
     setSending(true);
     try {
-      await insertMessage({ session_id: sessionId, sender_id: currentUserId, body: text });
+      await insertMessage({ answer_id: answerId, sender_id: currentUserId, body: text });
     } finally {
       setSending(false);
     }
@@ -182,7 +173,7 @@ export default function ChatRoom({
   async function sendPartPoll() {
     setSending(true);
     try {
-      await insertMessage({ session_id: sessionId, sender_id: currentUserId, body: "担当の楽器を教えてください" });
+      await insertMessage({ answer_id: answerId, sender_id: currentUserId, body: "担当の楽器を教えてください" });
     } finally {
       setSending(false);
     }
@@ -239,22 +230,24 @@ export default function ChatRoom({
         >
           <ChevronLeft size={18} color="var(--text)" />
         </button>
-        <div
-          style={{
-            flex: 1,
-            fontSize: "14px",
-            fontWeight: 700,
-            color: "var(--text)",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {sessionTitle}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "var(--text3)", flexShrink: 0 }}>
-          <Users size={13} />
-          <span style={{ fontSize: "12px", fontWeight: 600 }}>{memberCount}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: 700,
+              color: "var(--text)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {sessionTitle}
+          </div>
+          {partnerNickname && (
+            <div style={{ fontSize: "10.5px", color: "var(--text3)", marginTop: "1px" }}>
+              {partnerNickname}さんと
+            </div>
+          )}
         </div>
       </div>
 
@@ -334,55 +327,14 @@ export default function ChatRoom({
           </div>
         )}
 
-        {/* 保留中バー */}
-        {deferredAnswers.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setPendingBarExpanded((v) => !v)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              width: "100%",
-              padding: "10px 18px",
-              background: "var(--card2)",
-              border: "none",
-              borderBottom: "1px solid var(--border)",
-              borderTop: "1px solid var(--border)",
-              cursor: "pointer",
-              marginTop: "12px",
-              fontFamily: "inherit",
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red2)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-            </svg>
-            <span style={{ flex: 1, fontSize: "12px", fontWeight: 600, color: "var(--text2)", textAlign: "left" }}>
-              保留中 {deferredAnswers.length}人
-            </span>
-            {pendingBarExpanded ? <ChevronUp size={14} color="var(--text2)" /> : <ChevronDown size={14} color="var(--text2)" />}
-          </button>
-        )}
-
-        {/* 展開中の保留アンサー */}
-        {pendingBarExpanded && deferredAnswers.map((answer) => (
-          <AnswerCard
-            key={answer.id}
-            answer={answer}
-            onApprove={handleApprove}
-            onSkip={handleSkip}
-          />
-        ))}
-
         {/* 未承認アンサーカード（ホストのみ） */}
-        {role === "host" && pendingAnswers.map((answer) => (
+        {role === "host" && pendingAnswer && (
           <AnswerCard
-            key={answer.id}
-            answer={answer}
+            answer={pendingAnswer}
             onApprove={handleApprove}
             onSkip={handleSkip}
           />
-        ))}
+        )}
 
         {/* チャット区切り線 */}
         {chatVisible && (
@@ -660,7 +612,7 @@ export default function ChatRoom({
       <SchedulePollSetupSheet
         open={pollSheetOpen}
         onClose={() => setPollSheetOpen(false)}
-        sessionId={sessionId}
+        answerId={answerId}
         currentUserId={currentUserId}
       />
     </div>

@@ -20,24 +20,37 @@ export type SchedulePollWithResponses = Omit<SchedulePollRow, "candidates"> & {
 export default async function ChatPage({
   params,
 }: {
-  params: Promise<{ sessionId: string }>;
+  params: Promise<{ answerId: string }>;
 }) {
-  const { sessionId } = await params;
+  const { answerId } = await params;
   const supabase = await createServerSupabase();
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) redirect("/timeline");
 
   const currentUserId = authData.user.id;
 
-  // セッション + 投稿者プロフィール
+  // このルームの正体(承認待ち/承認済みの1アンサー)
+  const { data: answerRaw } = await supabase
+    .from("answers")
+    .select("*")
+    .eq("id", answerId)
+    .single();
+
+  const answer = answerRaw as AnswerRow | null;
+  if (!answer) redirect("/messages");
+
   const { data: sessionRaw } = await supabase
     .from("sessions")
     .select("*")
-    .eq("id", sessionId)
+    .eq("id", answer.session_id)
     .single();
 
   const session = sessionRaw as SessionRow | null;
   if (!session) redirect("/messages");
+
+  const isAuthor = session.author_id === currentUserId;
+  const isSender = answer.sender_id === currentUserId;
+  if (!isAuthor && !isSender) redirect("/messages");
 
   const { data: authorProfileRaw } = await supabase
     .from("profiles")
@@ -47,104 +60,37 @@ export default async function ChatPage({
   const authorProfile = authorProfileRaw as ProfileRow | null;
   const authorNickname = authorProfile?.nickname ?? "";
 
-  const isAuthor = session.author_id === currentUserId;
-
-  let role: "host" | "guest" | "pending" = "host";
-
-  if (!isAuthor) {
-    // 承認済みかチェック
-    const { data: approvedAnswer } = await supabase
-      .from("answers")
-      .select("id")
-      .eq("session_id", sessionId)
-      .eq("sender_id", currentUserId)
-      .eq("status", "approved")
-      .maybeSingle();
-
-    if (approvedAnswer) {
-      role = "guest";
-    } else {
-      // 保留中かチェック
-      const { data: pendingAnswer } = await supabase
-        .from("answers")
-        .select("id")
-        .eq("session_id", sessionId)
-        .eq("sender_id", currentUserId)
-        .eq("status", "pending")
-        .maybeSingle();
-
-      if (pendingAnswer) {
-        role = "pending";
-      } else {
-        redirect("/messages");
-      }
-    }
-  }
-
-  // 未承認アンサー（ホストのみ取得）
-  let pendingAnswers: PendingAnswerWithSender[] = [];
-  if (role === "host") {
-    const { data: pendingRaw } = await supabase
-      .from("answers")
-      .select("*")
-      .eq("session_id", sessionId)
-      .eq("status", "pending")
-      .order("created_at", { ascending: true });
-
-    const rawPending = (pendingRaw as AnswerRow[] | null) ?? [];
-    const senderIds = [...new Set(rawPending.map((a) => a.sender_id))];
-
-    let senderMap = new Map<string, ProfileRow>();
-    if (senderIds.length > 0) {
-      const { data: sendersRaw } = await supabase
-        .from("profiles")
-        .select("*")
-        .in("id", senderIds);
-      senderMap = new Map(
-        ((sendersRaw as ProfileRow[] | null) ?? []).map((p) => [p.id, p])
-      );
-    }
-
-    pendingAnswers = rawPending
-      .map((a) => {
-        const sender = senderMap.get(a.sender_id);
-        if (!sender) return null;
-        return { ...a, sender };
-      })
-      .filter((a): a is PendingAnswerWithSender => a !== null);
-  }
-
-  // 承認済み参加者（ホスト + 承認済みアンサー送信者）のプロフィール一覧
-  const { data: approvedAnswersRaw } = await supabase
-    .from("answers")
+  const { data: senderProfileRaw } = await supabase
+    .from("profiles")
     .select("*")
-    .eq("session_id", sessionId)
-    .eq("status", "approved");
-  const approvedSenderIds = [
-    ...new Set(((approvedAnswersRaw as AnswerRow[] | null) ?? []).map((a) => a.sender_id)),
-  ];
+    .eq("id", answer.sender_id)
+    .maybeSingle();
+  const senderProfile = senderProfileRaw as ProfileRow | null;
 
-  let approvedSenderProfiles: ProfileRow[] = [];
-  if (approvedSenderIds.length > 0) {
-    const { data: approvedSendersRaw } = await supabase
-      .from("profiles")
-      .select("*")
-      .in("id", approvedSenderIds);
-    approvedSenderProfiles = (approvedSendersRaw as ProfileRow[] | null) ?? [];
+  let role: "host" | "guest" | "pending";
+  if (isAuthor) {
+    role = "host";
+  } else if (answer.status === "approved") {
+    role = "guest";
+  } else {
+    role = "pending";
   }
 
-  const members: ProfileRow[] = authorProfile
-    ? [authorProfile, ...approvedSenderProfiles]
-    : approvedSenderProfiles;
-  const memberCount = members.length;
+  // このルームの相手(ホストからは送信者、送信者からはホスト)
+  const partnerProfile = isAuthor ? senderProfile : authorProfile;
 
-  // メッセージ取得（RLSで承認済み参加者のみ）
+  // 承認済みルームの参加者2人(ホスト + 送信者)
+  const members: ProfileRow[] = [authorProfile, senderProfile].filter(
+    (p): p is ProfileRow => p !== null
+  );
+
+  // メッセージ取得（RLSでこのルームの当事者のみ）
   let messages: MessageWithSender[] = [];
   if (role !== "pending") {
     const { data: messagesRaw } = await supabase
       .from("messages")
       .select("*")
-      .eq("session_id", sessionId)
+      .eq("answer_id", answerId)
       .order("created_at", { ascending: true })
       .limit(50);
 
@@ -180,13 +126,13 @@ export default async function ChatPage({
       .filter((m): m is MessageWithSender => m !== null);
   }
 
-  // 日程調整ポーリング取得（RLSで承認済み参加者のみ）
+  // 日程調整ポーリング取得（RLSでこのルームの当事者のみ）
   let schedulePolls: SchedulePollWithResponses[] = [];
   if (role !== "pending") {
     const { data: pollsRaw } = await supabase
       .from("schedule_polls")
       .select("*")
-      .eq("session_id", sessionId)
+      .eq("answer_id", answerId)
       .order("created_at", { ascending: true });
 
     const rawPolls = (pollsRaw as SchedulePollRow[] | null) ?? [];
@@ -215,15 +161,15 @@ export default async function ChatPage({
 
   return (
     <ChatRoom
-      sessionId={sessionId}
+      answerId={answerId}
       sessionTitle={session.title}
       sessionAudioUrl={session.audio_url}
       sessionAuthorNickname={authorNickname}
+      partnerNickname={partnerProfile?.nickname ?? ""}
       initialMessages={messages}
       currentUserId={currentUserId}
       role={role}
-      pendingAnswers={pendingAnswers}
-      initialMemberCount={memberCount}
+      pendingAnswer={answer.status === "pending" ? { ...answer, sender: senderProfile as ProfileRow } : null}
       members={members}
       initialSchedulePolls={schedulePolls}
     />

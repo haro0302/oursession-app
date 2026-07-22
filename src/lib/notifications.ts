@@ -15,7 +15,7 @@ export interface DerivedNotif {
   fromNickname: string;
   fromAvatarUrl: string | null;
   contextTitle: string;
-  contextId: string;
+  contextId: string; // ルームID(answer_id)。 /chat/{contextId} への遷移に使う
   createdAt: string;
 }
 
@@ -32,6 +32,9 @@ export async function fetchNotifications(userId: string): Promise<DerivedNotif[]
   const mySessionRows = (mySessions as Pick<SessionRow, "id" | "title">[] | null) ?? [];
   const mySessionIds = mySessionRows.map((s) => s.id);
   const sessionTitleMap = new Map(mySessionRows.map((s) => [s.id, s.title]));
+
+  // 自分がホストの承認済みルーム(answer_id)一覧。message通知の対象に使う
+  const hostApprovedAnswerIds: string[] = [];
 
   if (mySessionIds.length > 0) {
     const { data: pendingAnswers } = await supabase
@@ -65,10 +68,17 @@ export async function fetchNotifications(userId: string): Promise<DerivedNotif[]
         fromNickname: profile.nickname,
         fromAvatarUrl: profile.avatar_url,
         contextTitle: sessionTitleMap.get(a.session_id) ?? "",
-        contextId: a.session_id,
+        contextId: a.id,
         createdAt: a.created_at,
       });
     }
+
+    const { data: hostApproved } = await supabase
+      .from("answers")
+      .select("id")
+      .in("session_id", mySessionIds)
+      .eq("status", "approved");
+    hostApprovedAnswerIds.push(...(((hostApproved as Pick<AnswerRow, "id">[] | null) ?? []).map((a) => a.id)));
   }
 
   // 2. 自分が送ったアンサーが承認された → type='approved'
@@ -119,28 +129,26 @@ export async function fetchNotifications(userId: string): Promise<DerivedNotif[]
         fromNickname: author.nickname,
         fromAvatarUrl: author.avatar_url,
         contextTitle: sess.title,
-        contextId: a.session_id,
+        contextId: a.id,
         createdAt: a.created_at,
       });
     }
   }
 
-  // 3. 自分が参加中のチャットの他者メッセージ → type='message'
-  const allChatSessionIds = [
-    ...mySessionIds,
-    ...approvedSessionIds.filter((id) => !mySessionIds.includes(id)),
-  ];
+  // 3. 自分が参加中のルームでの他者メッセージ → type='message'
+  // 自分がホストの承認済みルーム + 自分が送って承認されたルーム(=自分が参加できるルーム全て)
+  const myRoomIds = [...new Set([...hostApprovedAnswerIds, ...rawApproved.map((a) => a.id)])];
 
-  if (allChatSessionIds.length > 0) {
+  if (myRoomIds.length > 0) {
     const { data: messagesRaw } = await supabase
       .from("messages")
-      .select("id, session_id, sender_id, body, created_at")
-      .in("session_id", allChatSessionIds)
+      .select("id, answer_id, sender_id, body, created_at")
+      .in("answer_id", myRoomIds)
       .neq("sender_id", userId)
       .order("created_at", { ascending: false })
       .limit(20);
 
-    const msgs = (messagesRaw as Pick<MessageRow, "id" | "session_id" | "sender_id" | "body" | "created_at">[] | null) ?? [];
+    const msgs = (messagesRaw as Pick<MessageRow, "id" | "answer_id" | "sender_id" | "body" | "created_at">[] | null) ?? [];
     const msgSenderIds = [...new Set(msgs.map((m) => m.sender_id))];
 
     let senderProfileMap = new Map<string, Pick<ProfileRow, "id" | "nickname" | "avatar_url">>();
@@ -154,11 +162,11 @@ export async function fetchNotifications(userId: string): Promise<DerivedNotif[]
       );
     }
 
-    // 同じセッションで重複しないよう最新1件のみ
-    const seenSessions = new Set<string>();
+    // 同じルームで重複しないよう最新1件のみ
+    const seenRooms = new Set<string>();
     for (const m of msgs) {
-      if (seenSessions.has(m.session_id)) continue;
-      seenSessions.add(m.session_id);
+      if (seenRooms.has(m.answer_id)) continue;
+      seenRooms.add(m.answer_id);
       const senderProfile = senderProfileMap.get(m.sender_id);
       const titleOrBody = m.body.slice(0, 40);
       results.push({
@@ -168,7 +176,7 @@ export async function fetchNotifications(userId: string): Promise<DerivedNotif[]
         fromNickname: senderProfile?.nickname ?? "不明",
         fromAvatarUrl: senderProfile?.avatar_url ?? null,
         contextTitle: titleOrBody,
-        contextId: m.session_id,
+        contextId: m.answer_id,
         createdAt: m.created_at,
       });
     }

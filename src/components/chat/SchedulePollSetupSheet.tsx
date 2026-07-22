@@ -10,11 +10,11 @@ const MAX_CANDIDATES = 6;
 interface Props {
   open: boolean;
   onClose: () => void;
-  sessionId: string;
+  answerId: string;
   currentUserId: string;
 }
 
-export default function SchedulePollSetupSheet({ open, onClose, sessionId, currentUserId }: Props) {
+export default function SchedulePollSetupSheet({ open, onClose, answerId, currentUserId }: Props) {
   const [rows, setRows] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -55,11 +55,11 @@ export default function SchedulePollSetupSheet({ open, onClose, sessionId, curre
         .filter((r) => r.trim().length > 0)
         .map((iso) => ({ id: crypto.randomUUID(), iso }));
       await insertSchedulePoll({
-        session_id: sessionId,
+        answer_id: answerId,
         created_by: currentUserId,
         candidates,
       });
-      showToast("候補を送りました🎵\nみんなの回答を待ちましょう。");
+      showToast("候補を送りました🎵\n相手の回答を待ちましょう。");
       resetAndClose();
     } catch {
       showToast("うまく送れませんでした\n電波の届く場所で、もう一度お試しください。");

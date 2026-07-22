@@ -21,13 +21,13 @@ export default function IncomingAnswerList({ answers: initial, currentUserId }: 
   async function handleApprove(answer: AnswerWithContext) {
     await updateAnswerStatus(answer.id, "approved");
     await insertMessage({
-      session_id: answer.session.id,
+      answer_id: answer.id,
       sender_id: currentUserId,
       body: `${answer.sender.nickname}さんと、会えそうですね🎵`,
     });
     setAnswers((prev) => prev.filter((a) => a.id !== answer.id));
     showToast(`${answer.sender.nickname}さんと、会えそうですね🎵`);
-    router.push(`/chat/${answer.session.id}`);
+    router.push(`/chat/${answer.id}`);
   }
 
   async function handleDecline(answerId: string) {

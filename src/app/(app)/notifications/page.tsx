@@ -15,7 +15,7 @@ export type AnswerWithContext = AnswerRow & {
 };
 
 type ActiveChat = {
-  sessionId: string;
+  answerId: string; // ルームID
   sessionTitle: string;
   partnerNickname: string;
   partnerAvatarUrl: string | null;
@@ -74,19 +74,18 @@ export default async function NotificationsPage() {
       .filter((a): a is AnswerWithContext => a !== null);
   }
 
-  // --- アクティブチャット（承認済み会話） ---
-  // パターン1: 自分が投稿者のセッションに承認済みアンサーがある
+  // --- アクティブチャット（承認済みルーム。1アンサー = 1ルーム） ---
+  // パターン1: 自分が投稿者のセッションに届いた承認済みアンサー
   const activeChats: ActiveChat[] = [];
-  const chatSessionIds = new Set<string>();
 
   if (mySessionIds.length > 0) {
     const { data: approvedAsAuthor } = await supabase
       .from("answers")
-      .select("session_id, sender_id")
+      .select("id, session_id, sender_id")
       .in("session_id", mySessionIds)
       .eq("status", "approved");
 
-    const rows = (approvedAsAuthor as { session_id: string; sender_id: string }[] | null) ?? [];
+    const rows = (approvedAsAuthor as { id: string; session_id: string; sender_id: string }[] | null) ?? [];
     const partnerIds = [...new Set(rows.map((r) => r.sender_id))];
 
     let partnerMap = new Map<string, ProfileRow>();
@@ -101,13 +100,11 @@ export default async function NotificationsPage() {
     }
 
     for (const row of rows) {
-      if (chatSessionIds.has(row.session_id)) continue;
       const session = sessionMap.get(row.session_id);
       const partner = partnerMap.get(row.sender_id);
       if (session && partner) {
-        chatSessionIds.add(row.session_id);
         activeChats.push({
-          sessionId: row.session_id,
+          answerId: row.id,
           sessionTitle: session.title,
           partnerNickname: partner.nickname,
           partnerAvatarUrl: partner.avatar_url,
@@ -117,53 +114,50 @@ export default async function NotificationsPage() {
     }
   }
 
-  // パターン2: 自分がアンサー送信者として承認されたセッション
+  // パターン2: 自分がアンサー送信者として承認されたルーム
   const { data: approvedAsSender } = await supabase
     .from("answers")
-    .select("session_id")
+    .select("id, session_id")
     .eq("sender_id", currentUserId)
     .eq("status", "approved");
 
-  const senderApprovedIds = (approvedAsSender as { session_id: string }[] | null) ?? [];
+  const senderApprovedRows = (approvedAsSender as { id: string; session_id: string }[] | null) ?? [];
 
-  if (senderApprovedIds.length > 0) {
-    const newSessionIds = senderApprovedIds
-      .map((r) => r.session_id)
-      .filter((id) => !chatSessionIds.has(id));
+  if (senderApprovedRows.length > 0) {
+    const senderSessionIds = [...new Set(senderApprovedRows.map((r) => r.session_id))];
 
-    if (newSessionIds.length > 0) {
-      const { data: sessionsRaw } = await supabase
-        .from("sessions")
-        .select("id, title, author_id")
-        .in("id", newSessionIds);
+    const { data: sessionsRaw } = await supabase
+      .from("sessions")
+      .select("id, title, author_id")
+      .in("id", senderSessionIds);
 
-      const sessionRows = (sessionsRaw as (Pick<SessionRow, "id" | "title"> & { author_id: string })[] | null) ?? [];
-      const authorIds = [...new Set(sessionRows.map((s) => s.author_id))];
+    const sessionRows = (sessionsRaw as (Pick<SessionRow, "id" | "title"> & { author_id: string })[] | null) ?? [];
+    const sessionInfoMap = new Map(sessionRows.map((s) => [s.id, s]));
+    const authorIds = [...new Set(sessionRows.map((s) => s.author_id))];
 
-      let authorMap = new Map<string, ProfileRow>();
-      if (authorIds.length > 0) {
-        const { data: authorsRaw } = await supabase
-          .from("profiles")
-          .select("*")
-          .in("id", authorIds);
-        authorMap = new Map(
-          ((authorsRaw as ProfileRow[] | null) ?? []).map((p) => [p.id, p])
-        );
-      }
+    let authorMap = new Map<string, ProfileRow>();
+    if (authorIds.length > 0) {
+      const { data: authorsRaw } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("id", authorIds);
+      authorMap = new Map(
+        ((authorsRaw as ProfileRow[] | null) ?? []).map((p) => [p.id, p])
+      );
+    }
 
-      for (const s of sessionRows) {
-        if (chatSessionIds.has(s.id)) continue;
-        const author = authorMap.get(s.author_id);
-        if (author) {
-          chatSessionIds.add(s.id);
-          activeChats.push({
-            sessionId: s.id,
-            sessionTitle: s.title,
-            partnerNickname: author.nickname,
-            partnerAvatarUrl: author.avatar_url,
-            partnerIsPractice: author.is_practice ?? false,
-          });
-        }
+    for (const row of senderApprovedRows) {
+      const s = sessionInfoMap.get(row.session_id);
+      if (!s) continue;
+      const author = authorMap.get(s.author_id);
+      if (author) {
+        activeChats.push({
+          answerId: row.id,
+          sessionTitle: s.title,
+          partnerNickname: author.nickname,
+          partnerAvatarUrl: author.avatar_url,
+          partnerIsPractice: author.is_practice ?? false,
+        });
       }
     }
   }
@@ -207,8 +201,8 @@ export default async function NotificationsPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {activeChats.map((chat) => (
               <Link
-                key={chat.sessionId}
-                href={`/chat/${chat.sessionId}`}
+                key={chat.answerId}
+                href={`/chat/${chat.answerId}`}
                 style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--card)", border: "1px solid var(--border)", borderRadius: "16px", padding: "14px 16px", textDecoration: "none", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
               >
                 <Avatar

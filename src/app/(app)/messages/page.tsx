@@ -8,6 +8,7 @@ type AnswerRow = Database["public"]["Tables"]["answers"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 export type MsgRow = {
+  roomId: string | null; // answer_id。まだアンサーが無いセッションは null(ルーム未生成)
   sessionId: string;
   sessionTitle: string;
   partnerNickname: string;
@@ -29,7 +30,7 @@ export default async function MessagesPage() {
   const currentUserId = authData.user.id;
   const rows: MsgRow[] = [];
 
-  // 自分のプロフィール（ホスト行のアバター用）
+  // 自分のプロフィール（アンサーがまだ無いセッション行のアバター用）
   const { data: myProfileRaw } = await supabase
     .from("profiles")
     .select("nickname, avatar_url, is_practice")
@@ -37,7 +38,7 @@ export default async function MessagesPage() {
     .maybeSingle();
   const myProfile = myProfileRaw as Pick<ProfileRow, "nickname" | "avatar_url" | "is_practice"> | null;
 
-  // ── ホスト行: 自分が投稿したセッション ──────────────────────────
+  // ── ホスト行: 自分が投稿したセッションに届いた「1アンサー = 1ルーム」 ──────
   const { data: mySessionsRaw } = await supabase
     .from("sessions")
     .select("id, title, created_at")
@@ -46,49 +47,61 @@ export default async function MessagesPage() {
 
   const mySessions = (mySessionsRaw as Pick<SessionRow, "id" | "title" | "created_at">[] | null) ?? [];
   const mySessionIds = mySessions.map((s) => s.id);
+  const mySessionMap = new Map(mySessions.map((s) => [s.id, s]));
 
   if (mySessionIds.length > 0) {
-    // セッションへの全アンサー（pending + approved）を一括取得
     const { data: allAnswersRaw } = await supabase
       .from("answers")
-      .select("session_id, status, created_at")
+      .select("id, session_id, sender_id, status, created_at")
       .in("session_id", mySessionIds)
-      .in("status", ["pending", "approved"]);
+      .in("status", ["pending", "approved"])
+      .order("created_at", { ascending: false });
 
-    const allAnswers = (allAnswersRaw as Pick<AnswerRow, "session_id" | "status" | "created_at">[] | null) ?? [];
+    const allAnswers =
+      (allAnswersRaw as Pick<AnswerRow, "id" | "session_id" | "sender_id" | "status" | "created_at">[] | null) ?? [];
 
-    // セッションごとに集計
-    const answerSummary = new Map<string, { pendingCount: number; hasActivity: boolean; latestTime: string }>();
-    for (const a of allAnswers) {
-      const entry = answerSummary.get(a.session_id) ?? { pendingCount: 0, hasActivity: false, latestTime: "" };
-      if (a.status === "pending") entry.pendingCount++;
-      entry.hasActivity = true;
-      if (!entry.latestTime || a.created_at > entry.latestTime) entry.latestTime = a.created_at;
-      answerSummary.set(a.session_id, entry);
+    const answerSenderIds = [...new Set(allAnswers.map((a) => a.sender_id))];
+    let answerSenderMap = new Map<string, ProfileRow>();
+    if (answerSenderIds.length > 0) {
+      const { data: sendersRaw } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("id", answerSenderIds);
+      answerSenderMap = new Map(
+        ((sendersRaw as ProfileRow[] | null) ?? []).map((p) => [p.id, p])
+      );
     }
 
-    for (const session of mySessions) {
-      const summary = answerSummary.get(session.id);
-      const pendingCount = summary?.pendingCount ?? 0;
-      const rawTime = summary?.latestTime || session.created_at;
+    const sessionsWithAnswer = new Set<string>();
 
-      let previewText: string;
-      let previewState: MsgRow["previewState"];
-      let badge = 0;
+    for (const answer of allAnswers) {
+      const session = mySessionMap.get(answer.session_id);
+      const sender = answerSenderMap.get(answer.sender_id);
+      if (!session || !sender) continue;
+      sessionsWithAnswer.add(answer.session_id);
 
-      if (pendingCount > 0) {
-        previewText = `新しいアンサー · ${pendingCount}件`;
-        previewState = "alert";
-        badge = pendingCount;
-      } else if (summary?.hasActivity) {
-        previewText = "チャット進行中";
-        previewState = "normal";
-      } else {
-        previewText = "セッションアンサーはまだいません";
-        previewState = "empty";
-      }
-
+      const isPending = answer.status === "pending";
       rows.push({
+        roomId: answer.id,
+        sessionId: session.id,
+        sessionTitle: session.title,
+        partnerNickname: sender.nickname,
+        partnerUserId: sender.id,
+        partnerAvatarUrl: sender.avatar_url,
+        partnerIsPractice: sender.is_practice ?? false,
+        role: "host",
+        previewText: isPending ? "新しいアンサーが届きました" : "チャット進行中",
+        previewState: isPending ? "alert" : "normal",
+        rawTime: answer.created_at,
+        badge: isPending ? 1 : 0,
+      });
+    }
+
+    // アンサーがまだ1件も無いセッションは「まだいません」のプレースホルダー行を出す
+    for (const session of mySessions) {
+      if (sessionsWithAnswer.has(session.id)) continue;
+      rows.push({
+        roomId: null,
         sessionId: session.id,
         sessionTitle: session.title,
         partnerNickname: myProfile?.nickname ?? "あなた",
@@ -96,10 +109,10 @@ export default async function MessagesPage() {
         partnerAvatarUrl: myProfile?.avatar_url ?? null,
         partnerIsPractice: myProfile?.is_practice ?? false,
         role: "host",
-        previewText,
-        previewState,
-        rawTime,
-        badge,
+        previewText: "セッションアンサーはまだいません",
+        previewState: "empty",
+        rawTime: session.created_at,
+        badge: 0,
       });
     }
   }
@@ -107,12 +120,12 @@ export default async function MessagesPage() {
   // ── ゲスト行: 自分が送ったアンサー（自分のセッションは除外）──────
   const { data: myAnswersRaw } = await supabase
     .from("answers")
-    .select("session_id, status, created_at")
+    .select("id, session_id, status, created_at")
     .eq("sender_id", currentUserId)
     .in("status", ["pending", "approved"])
     .order("created_at", { ascending: false });
 
-  const myAnswers = (myAnswersRaw as Pick<AnswerRow, "session_id" | "status" | "created_at">[] | null) ?? [];
+  const myAnswers = (myAnswersRaw as Pick<AnswerRow, "id" | "session_id" | "status" | "created_at">[] | null) ?? [];
   const mySessionIdSet = new Set(mySessionIds);
 
   const guestAnswers = myAnswers.filter((a) => !mySessionIdSet.has(a.session_id));
@@ -142,12 +155,8 @@ export default async function MessagesPage() {
     }
 
     const guestSessionMap = new Map(guestSessions.map((s) => [s.id, s]));
-    const seenSessions = new Set<string>();
 
     for (const answer of guestAnswers) {
-      if (seenSessions.has(answer.session_id)) continue;
-      seenSessions.add(answer.session_id);
-
       const session = guestSessionMap.get(answer.session_id);
       if (!session) continue;
       const author = authorMap.get(session.author_id);
@@ -156,6 +165,7 @@ export default async function MessagesPage() {
       const role: MsgRow["role"] = answer.status === "approved" ? "guest" : "pending";
 
       rows.push({
+        roomId: answer.id,
         sessionId: session.id,
         sessionTitle: session.title,
         partnerNickname: author.nickname,

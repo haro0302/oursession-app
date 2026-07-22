@@ -87,19 +87,19 @@ export default function MessagesClient({ rows, currentUserId }: Props) {
   }, [markAllRead]);
 
   useEffect(() => {
-    const sessionIds = rows.map((r) => r.sessionId);
+    const roomIds = rows.map((r) => r.roomId).filter((id): id is string => id !== null);
     let cancelled = false;
 
     async function load() {
-      const events = await fetchOtherPartyMessages(currentUserId, sessionIds);
+      const events = await fetchOtherPartyMessages(currentUserId, roomIds);
       if (cancelled) return;
       const stats = new Map<string, SessionStats>();
       for (const e of events) {
-        const entry = stats.get(e.sessionId) ?? { latestAt: e.createdAt, unreadCount: 0 };
+        const entry = stats.get(e.roomId) ?? { latestAt: e.createdAt, unreadCount: 0 };
         if (e.createdAt > entry.latestAt) entry.latestAt = e.createdAt;
-        const readAt = getChatReadAt(e.sessionId);
+        const readAt = getChatReadAt(e.roomId);
         if (!readAt || new Date(e.createdAt) > readAt) entry.unreadCount++;
-        stats.set(e.sessionId, entry);
+        stats.set(e.roomId, entry);
       }
       setMessageStats(stats);
     }
@@ -121,7 +121,7 @@ export default function MessagesClient({ rows, currentUserId }: Props) {
 
   const sortedRows = visibleRows
     .map((row) => {
-      const stats = messageStats.get(row.sessionId);
+      const stats = row.roomId ? messageStats.get(row.roomId) : undefined;
       const unreadCount = stats?.unreadCount ?? 0;
       const effectiveTime = stats && stats.latestAt > row.rawTime ? stats.latestAt : row.rawTime;
       const badge = row.badge + unreadCount;
@@ -161,12 +161,12 @@ export default function MessagesClient({ rows, currentUserId }: Props) {
       <div className="msg-list">
         {sortedRows.map((row) => (
           <div
-            key={`${row.role}-${row.sessionId}`}
+            key={`${row.role}-${row.roomId ?? row.sessionId}`}
             role="button"
             tabIndex={0}
             className="msg-row"
-            onClick={() => router.push(`/chat/${row.sessionId}`)}
-            onKeyDown={(e) => e.key === "Enter" && router.push(`/chat/${row.sessionId}`)}
+            onClick={() => row.roomId && router.push(`/chat/${row.roomId}`)}
+            onKeyDown={(e) => e.key === "Enter" && row.roomId && router.push(`/chat/${row.roomId}`)}
           >
             <div
               role="button"

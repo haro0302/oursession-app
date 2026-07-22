@@ -6,7 +6,7 @@ import Avatar from "@/components/ui/Avatar";
 import { upsertSchedulePollResponse } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import { timeAgo } from "@/lib/time";
-import type { SchedulePollWithResponses } from "@/app/chat/[sessionId]/page";
+import type { SchedulePollWithResponses } from "@/app/chat/[answerId]/page";
 import type { Database, ScheduleAnswerValue } from "@/types/database";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -70,7 +70,7 @@ export default function SchedulePollCard({ poll, members, currentUserId }: Props
     try {
       await upsertSchedulePollResponse({
         poll_id: poll.id,
-        session_id: poll.session_id,
+        answer_id: poll.answer_id,
         user_id: currentUserId,
         answers: draft,
       });
