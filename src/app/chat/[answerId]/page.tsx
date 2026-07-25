@@ -1,20 +1,23 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase-server";
 import ChatRoom from "@/components/chat/ChatRoom";
-import type { Database, ScheduleAnswerValue, ScheduleCandidate } from "@/types/database";
+import type { AssistAnswerValue, Database, ScheduleAnswerValue, ScheduleCandidate, StudioProposal } from "@/types/database";
 
 type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 type AnswerRow = Database["public"]["Tables"]["answers"]["Row"];
+type AssistAnswerRow = Database["public"]["Tables"]["session_assist_answers"]["Row"];
 type SchedulePollRow = Database["public"]["Tables"]["schedule_polls"]["Row"];
-type SchedulePollResponseRow = Database["public"]["Tables"]["schedule_poll_responses"]["Row"];
 
 export type MessageWithSender = MessageRow & { sender: ProfileRow };
 export type PendingAnswerWithSender = AnswerRow & { sender: ProfileRow };
+
+// 日程調整ポーリング(旧・第1段)はUIから撤去済みだが、SchedulePollCard.tsx は
+// 当面残しているためこの型だけは互換のためエクスポートしておく。
 export type SchedulePollWithResponses = Omit<SchedulePollRow, "candidates"> & {
   candidates: ScheduleCandidate[];
-  responses: Record<string, Record<string, ScheduleAnswerValue>>; // userId -> candidateId -> answer
+  responses: Record<string, Record<string, ScheduleAnswerValue>>;
 };
 
 export default async function ChatPage({
@@ -79,11 +82,6 @@ export default async function ChatPage({
   // このルームの相手(ホストからは送信者、送信者からはホスト)
   const partnerProfile = isAuthor ? senderProfile : authorProfile;
 
-  // 承認済みルームの参加者2人(ホスト + 送信者)
-  const members: ProfileRow[] = [authorProfile, senderProfile].filter(
-    (p): p is ProfileRow => p !== null
-  );
-
   // メッセージ取得（RLSでこのルームの当事者のみ）
   let messages: MessageWithSender[] = [];
   if (role !== "pending") {
@@ -126,37 +124,26 @@ export default async function ChatPage({
       .filter((m): m is MessageWithSender => m !== null);
   }
 
-  // 日程調整ポーリング取得（RLSでこのルームの当事者のみ）
-  let schedulePolls: SchedulePollWithResponses[] = [];
+  // セッションアシストの回答取得（RLSにより、自分の回答 or 両者が答えて開封済みの行だけが返る）
+  const assistAnswers: Record<number, Record<string, AssistAnswerValue>> = {};
+  let studioProposals: StudioProposal[] = [];
   if (role !== "pending") {
-    const { data: pollsRaw } = await supabase
-      .from("schedule_polls")
+    const { data: assistRaw } = await supabase
+      .from("session_assist_answers")
+      .select("*")
+      .eq("answer_id", answerId);
+
+    for (const row of (assistRaw as AssistAnswerRow[] | null) ?? []) {
+      if (!assistAnswers[row.card_index]) assistAnswers[row.card_index] = {};
+      assistAnswers[row.card_index][row.user_id] = row.value as AssistAnswerValue;
+    }
+
+    const { data: proposalsRaw } = await supabase
+      .from("session_assist_studio_proposals")
       .select("*")
       .eq("answer_id", answerId)
       .order("created_at", { ascending: true });
-
-    const rawPolls = (pollsRaw as SchedulePollRow[] | null) ?? [];
-
-    if (rawPolls.length > 0) {
-      const pollIds = rawPolls.map((p) => p.id);
-      const { data: responsesRaw } = await supabase
-        .from("schedule_poll_responses")
-        .select("*")
-        .in("poll_id", pollIds);
-
-      const rawResponses = (responsesRaw as SchedulePollResponseRow[] | null) ?? [];
-      const responsesByPoll = new Map<string, Record<string, Record<string, ScheduleAnswerValue>>>();
-      for (const r of rawResponses) {
-        if (!responsesByPoll.has(r.poll_id)) responsesByPoll.set(r.poll_id, {});
-        responsesByPoll.get(r.poll_id)![r.user_id] = r.answers as Record<string, ScheduleAnswerValue>;
-      }
-
-      schedulePolls = rawPolls.map((p) => ({
-        ...p,
-        candidates: p.candidates as unknown as ScheduleCandidate[],
-        responses: responsesByPoll.get(p.id) ?? {},
-      }));
-    }
+    studioProposals = (proposalsRaw as StudioProposal[] | null) ?? [];
   }
 
   return (
@@ -166,12 +153,13 @@ export default async function ChatPage({
       sessionAudioUrl={session.audio_url}
       sessionAuthorNickname={authorNickname}
       partnerNickname={partnerProfile?.nickname ?? ""}
+      partnerId={partnerProfile?.id ?? ""}
       initialMessages={messages}
       currentUserId={currentUserId}
       role={role}
       pendingAnswer={answer.status === "pending" ? { ...answer, sender: senderProfile as ProfileRow } : null}
-      members={members}
-      initialSchedulePolls={schedulePolls}
+      initialAssistAnswers={assistAnswers}
+      initialStudioProposals={studioProposals}
     />
   );
 }

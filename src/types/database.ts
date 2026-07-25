@@ -263,6 +263,98 @@ export interface Database {
           }
         ];
       };
+      session_assist_answers: {
+        Row: {
+          answer_id: string;
+          user_id: string;
+          card_index: number;
+          value: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          answer_id: string;
+          user_id: string;
+          card_index: number;
+          value: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          value?: Json;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_assist_answers_answer_id_fkey";
+            columns: ["answer_id"];
+            isOneToOne: false;
+            referencedRelation: "answers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "session_assist_answers_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      session_assist_studio_proposals: {
+        Row: {
+          id: string;
+          answer_id: string;
+          created_by: string;
+          studio_name: string;
+          area: string;
+          fee_per_hour: number | null;
+          url: string | null;
+          slots: Json;
+          chosen_index: number | null;
+          chosen_by: string | null;
+          chosen_at: string | null;
+          booked_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          answer_id: string;
+          created_by: string;
+          studio_name: string;
+          area: string;
+          fee_per_hour?: number | null;
+          url?: string | null;
+          slots: Json;
+          chosen_index?: number | null;
+          chosen_by?: string | null;
+          chosen_at?: string | null;
+          booked_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          chosen_index?: number | null;
+          chosen_by?: string | null;
+          chosen_at?: string | null;
+          booked_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_assist_studio_proposals_answer_id_fkey";
+            columns: ["answer_id"];
+            isOneToOne: false;
+            referencedRelation: "answers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "session_assist_studio_proposals_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       saves: {
         Row: {
           user_id: string;
@@ -341,9 +433,27 @@ export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type Save = Database["public"]["Tables"]["saves"]["Row"];
 export type SchedulePoll = Database["public"]["Tables"]["schedule_polls"]["Row"];
 export type SchedulePollResponse = Database["public"]["Tables"]["schedule_poll_responses"]["Row"];
+export type SessionAssistAnswer = Database["public"]["Tables"]["session_assist_answers"]["Row"];
+export type StudioProposal = Database["public"]["Tables"]["session_assist_studio_proposals"]["Row"];
 
 export type ScheduleAnswerValue = "ok" | "maybe" | "no";
 export interface ScheduleCandidate {
   id: string;
   iso: string;
+}
+
+// お題デッキ カード0(パート＋音楽歴)の回答値
+export interface AssistProfileValue {
+  parts: string[];
+  years: string;
+}
+
+// カード1〜4(自由記述)は string、カード5(時間帯)は string[] をそのまま value に格納する。
+export type AssistAnswerValue = AssistProfileValue | string | string[];
+
+// スタジオ枠提案の1枠
+export interface StudioSlot {
+  date: string; // "YYYY-MM-DD"
+  startHour: number; // 10-22
+  durationHours: 1 | 2 | 3;
 }

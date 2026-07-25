@@ -4,20 +4,22 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase";
-import { insertMessage } from "@/lib/db";
+import { insertMessage, upsertAssistAnswer, insertStudioProposal, chooseStudioSlot, markStudioBooked } from "@/lib/db";
 import { markChatRead } from "@/lib/chatReads";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import Avatar from "@/components/ui/Avatar";
-import SchedulePollSetupSheet from "@/components/chat/SchedulePollSetupSheet";
-import SchedulePollCard from "@/components/chat/SchedulePollCard";
+import AssistDeckDrawer from "@/components/chat/AssistDeckDrawer";
+import AssistRecordList from "@/components/chat/AssistRecordList";
+import SessionAssistPanel from "@/components/chat/SessionAssistPanel";
+import StudioProposalDrawer from "@/components/chat/StudioProposalDrawer";
 import { timeAgo } from "@/lib/time";
-import type { MessageWithSender, PendingAnswerWithSender, SchedulePollWithResponses } from "@/app/chat/[answerId]/page";
-import type { Database, ScheduleAnswerValue } from "@/types/database";
+import type { MessageWithSender, PendingAnswerWithSender } from "@/app/chat/[answerId]/page";
+import type { AssistAnswerValue, Database, StudioProposal, StudioSlot } from "@/types/database";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
-type SchedulePollRow = Database["public"]["Tables"]["schedule_polls"]["Row"];
-type SchedulePollResponseRow = Database["public"]["Tables"]["schedule_poll_responses"]["Row"];
+type AssistAnswerRow = Database["public"]["Tables"]["session_assist_answers"]["Row"];
+type StudioProposalRow = Database["public"]["Tables"]["session_assist_studio_proposals"]["Row"];
 
 interface Props {
   answerId: string;
@@ -25,12 +27,13 @@ interface Props {
   sessionAudioUrl: string | null;
   sessionAuthorNickname: string;
   partnerNickname: string;
+  partnerId: string;
   initialMessages: MessageWithSender[];
   currentUserId: string;
   role: "host" | "guest" | "pending";
   pendingAnswer: PendingAnswerWithSender | null;
-  members: ProfileRow[];
-  initialSchedulePolls: SchedulePollWithResponses[];
+  initialAssistAnswers: Record<number, Record<string, AssistAnswerValue>>;
+  initialStudioProposals: StudioProposal[];
 }
 
 export default function ChatRoom({
@@ -39,20 +42,25 @@ export default function ChatRoom({
   sessionAudioUrl,
   sessionAuthorNickname,
   partnerNickname,
+  partnerId,
   initialMessages,
   currentUserId,
   role,
   pendingAnswer: initialPendingAnswer,
-  members,
-  initialSchedulePolls,
+  initialAssistAnswers,
+  initialStudioProposals,
 }: Props) {
   const router = useRouter();
   const [messages, setMessages] = useState<MessageWithSender[]>(initialMessages);
-  const [schedulePolls, setSchedulePolls] = useState<SchedulePollWithResponses[]>(initialSchedulePolls);
-  const [pollSheetOpen, setPollSheetOpen] = useState(false);
+  const [assistAnswers, setAssistAnswers] = useState<Record<number, Record<string, AssistAnswerValue>>>(initialAssistAnswers);
+  const [studioProposals, setStudioProposals] = useState<StudioProposal[]>(initialStudioProposals);
+  const [deckDrawerOpen, setDeckDrawerOpen] = useState(false);
+  const [deckDrawerStartIndex, setDeckDrawerStartIndex] = useState(0);
+  const [studioDrawerOpen, setStudioDrawerOpen] = useState(false);
+  const [choosingId, setChoosingId] = useState<string | null>(null);
+  const [bookingId, setBookingId] = useState<string | null>(null);
   const [pendingAnswer, setPendingAnswer] = useState<PendingAnswerWithSender | null>(initialPendingAnswer);
   const [chatVisible, setChatVisible] = useState(role !== "host" || !initialPendingAnswer);
-  const [greetingOpen, setGreetingOpen] = useState(false);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -60,7 +68,7 @@ export default function ChatRoom({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, schedulePolls]);
+  }, [messages, assistAnswers, studioProposals]);
 
   useEffect(() => {
     if (role === "pending") return;
@@ -93,34 +101,25 @@ export default function ChatRoom({
       )
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "schedule_polls", filter: `answer_id=eq.${answerId}` },
+        { event: "*", schema: "public", table: "session_assist_answers", filter: `answer_id=eq.${answerId}` },
         (payload) => {
-          const newPoll = payload.new as SchedulePollRow;
-          setSchedulePolls((prev) => {
-            if (prev.some((p) => p.id === newPoll.id)) return prev;
-            return [
-              ...prev,
-              {
-                ...newPoll,
-                candidates: newPoll.candidates as unknown as SchedulePollWithResponses["candidates"],
-                responses: {},
-              },
-            ];
-          });
+          const row = payload.new as AssistAnswerRow;
+          setAssistAnswers((prev) => ({
+            ...prev,
+            [row.card_index]: { ...prev[row.card_index], [row.user_id]: row.value as AssistAnswerValue },
+          }));
         }
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "schedule_poll_responses", filter: `answer_id=eq.${answerId}` },
+        { event: "*", schema: "public", table: "session_assist_studio_proposals", filter: `answer_id=eq.${answerId}` },
         (payload) => {
-          const row = payload.new as SchedulePollResponseRow;
-          setSchedulePolls((prev) =>
-            prev.map((p) =>
-              p.id === row.poll_id
-                ? { ...p, responses: { ...p.responses, [row.user_id]: row.answers as Record<string, ScheduleAnswerValue> } }
-                : p
-            )
-          );
+          const row = payload.new as StudioProposalRow;
+          setStudioProposals((prev) => {
+            const exists = prev.some((p) => p.id === row.id);
+            if (exists) return prev.map((p) => (p.id === row.id ? row : p));
+            return [...prev, row].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          });
         }
       )
       .subscribe();
@@ -160,39 +159,93 @@ export default function ChatRoom({
     }
   }
 
-  async function sendGreeting(text: string) {
-    setGreetingOpen(false);
-    setSending(true);
-    try {
-      await insertMessage({ answer_id: answerId, sender_id: currentUserId, body: text });
-    } finally {
-      setSending(false);
+  async function saveAssistAnswer(cardIndex: number, value: AssistAnswerValue) {
+    await upsertAssistAnswer({
+      answer_id: answerId,
+      user_id: currentUserId,
+      card_index: cardIndex,
+      value: value as unknown as Database["public"]["Tables"]["session_assist_answers"]["Insert"]["value"],
+    });
+    setAssistAnswers((prev) => ({
+      ...prev,
+      [cardIndex]: { ...prev[cardIndex], [currentUserId]: value },
+    }));
+    // 自分が回答したことで初めて相手の回答がRLSで見えるようになる場合があるため、
+    // このカードだけ取り直して開封の取りこぼしを防ぐ。
+    const { data } = await supabase
+      .from("session_assist_answers")
+      .select("*")
+      .eq("answer_id", answerId)
+      .eq("card_index", cardIndex);
+    if (data) {
+      setAssistAnswers((prev) => {
+        const next = { ...prev[cardIndex] };
+        for (const row of data as AssistAnswerRow[]) {
+          next[row.user_id] = row.value as AssistAnswerValue;
+        }
+        return { ...prev, [cardIndex]: next };
+      });
     }
   }
 
-  async function sendPartPoll() {
-    setSending(true);
+  function openDeckDrawer(startIndex: number) {
+    setDeckDrawerStartIndex(startIndex);
+    setDeckDrawerOpen(true);
+  }
+
+  async function submitStudioProposal(data: {
+    studio_name: string;
+    area: string;
+    fee_per_hour: number | null;
+    url: string | null;
+    slots: StudioSlot[];
+  }) {
+    await insertStudioProposal({
+      answer_id: answerId,
+      created_by: currentUserId,
+      studio_name: data.studio_name,
+      area: data.area,
+      fee_per_hour: data.fee_per_hour,
+      url: data.url,
+      slots: data.slots as unknown as Database["public"]["Tables"]["session_assist_studio_proposals"]["Insert"]["slots"],
+    });
+  }
+
+  async function handleChooseSlot(proposalId: string, index: number) {
+    if (choosingId) return;
+    setChoosingId(proposalId);
     try {
-      await insertMessage({ answer_id: answerId, sender_id: currentUserId, body: "担当の楽器を教えてください" });
+      await chooseStudioSlot(proposalId, { chosen_index: index, chosen_by: currentUserId });
+      setStudioProposals((prev) =>
+        prev.map((p) =>
+          p.id === proposalId
+            ? { ...p, chosen_index: index, chosen_by: currentUserId, chosen_at: new Date().toISOString() }
+            : p
+        )
+      );
     } finally {
-      setSending(false);
+      setChoosingId(null);
+    }
+  }
+
+  async function handleMarkBooked(proposalId: string) {
+    if (bookingId) return;
+    setBookingId(proposalId);
+    try {
+      await markStudioBooked(proposalId);
+      setStudioProposals((prev) =>
+        prev.map((p) => (p.id === proposalId ? { ...p, booked_at: new Date().toISOString() } : p))
+      );
+    } finally {
+      setBookingId(null);
     }
   }
 
   const isInputVisible = role !== "pending";
-  const isQuickReplyVisible = chatVisible && role !== "pending";
 
-  type FeedItem =
-    | { kind: "message"; createdAt: string; data: MessageWithSender }
-    | { kind: "poll"; createdAt: string; data: SchedulePollWithResponses };
-
-  const feed = useMemo<FeedItem[]>(() => {
-    const items: FeedItem[] = [
-      ...messages.map((m): FeedItem => ({ kind: "message", createdAt: m.created_at, data: m })),
-      ...schedulePolls.map((p): FeedItem => ({ kind: "poll", createdAt: p.created_at, data: p })),
-    ];
-    return items.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  }, [messages, schedulePolls]);
+  const feed = useMemo(() => {
+    return [...messages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [messages]);
 
   return (
     <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", background: "var(--bg)" }}>
@@ -256,7 +309,7 @@ export default function ChatRoom({
         style={{
           flex: 1,
           overflowY: "auto",
-          paddingBottom: isInputVisible ? (isQuickReplyVisible ? "120px" : "70px") : "40px",
+          paddingBottom: isInputVisible ? "70px" : "40px",
         }}
       >
         {/* セッションスニペット */}
@@ -336,6 +389,32 @@ export default function ChatRoom({
           />
         )}
 
+        {/* セッションアシスト（お題デッキ＋スタジオ枠提案） */}
+        {chatVisible && (
+          <div style={{ margin: "16px 18px 0" }}>
+            <AssistRecordList
+              assistAnswers={assistAnswers}
+              currentUserId={currentUserId}
+              partnerId={partnerId}
+              partnerNickname={partnerNickname}
+            />
+            <SessionAssistPanel
+              assistAnswers={assistAnswers}
+              currentUserId={currentUserId}
+              partnerId={partnerId}
+              partnerNickname={partnerNickname}
+              role={role === "guest" ? "guest" : "host"}
+              studioProposals={studioProposals}
+              onOpenDeck={openDeckDrawer}
+              onOpenStudioDrawer={() => setStudioDrawerOpen(true)}
+              onChooseSlot={handleChooseSlot}
+              onMarkBooked={handleMarkBooked}
+              choosingId={choosingId}
+              bookingId={bookingId}
+            />
+          </div>
+        )}
+
         {/* チャット区切り線 */}
         {chatVisible && (
           <div
@@ -370,19 +449,7 @@ export default function ChatRoom({
                 最初のメッセージを送りましょう
               </div>
             )}
-            {feed.map((item) => {
-              if (item.kind === "poll") {
-                return (
-                  <SchedulePollCard
-                    key={`poll-${item.data.id}`}
-                    poll={item.data}
-                    members={members}
-                    currentUserId={currentUserId}
-                  />
-                );
-              }
-
-              const msg = item.data;
+            {feed.map((msg) => {
               const isSystem = msg.body.includes("会えそうですね");
               const isMine = msg.sender_id === currentUserId;
 
@@ -454,96 +521,6 @@ export default function ChatRoom({
         )}
       </div>
 
-      {/* 挨拶ピッカー */}
-      {greetingOpen && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: isInputVisible ? (isQuickReplyVisible ? "118px" : "68px") : "8px",
-            left: "16px",
-            right: "16px",
-            background: "var(--card)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid var(--border)",
-            borderRadius: "16px",
-            overflow: "hidden",
-            zIndex: 10,
-          }}
-        >
-          {["こんにちは", "よろしくお願いします", "はじめまして"].map((text, i, arr) => (
-            <button
-              key={text}
-              type="button"
-              onClick={() => sendGreeting(text)}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "12px 16px",
-                background: "transparent",
-                border: "none",
-                borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none",
-                cursor: "pointer",
-                textAlign: "left",
-                fontSize: "14px",
-                color: "var(--text)",
-                fontFamily: "inherit",
-              }}
-            >
-              {text}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* クイックリプライ */}
-      {isQuickReplyVisible && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "56px",
-            left: 0,
-            right: 0,
-            display: "flex",
-            gap: "8px",
-            padding: "6px 16px",
-            background: "var(--bg)",
-            borderTop: "1px solid var(--border)",
-            overflowX: "auto",
-          }}
-        >
-          {[
-            { label: "挨拶する", disabled: false, onClick: () => setGreetingOpen((v) => !v) },
-            { label: "担当は?", disabled: false, onClick: sendPartPoll },
-            { label: "日程は?", disabled: false, onClick: () => setPollSheetOpen(true) },
-            { label: "スタジオは?", disabled: true, onClick: () => {} },
-          ].map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={chip.disabled ? undefined : chip.onClick}
-              disabled={chip.disabled}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "20px",
-                border: "1px solid var(--border)",
-                background: chip.disabled ? "transparent" : "var(--card)",
-                color: chip.disabled ? "var(--text3)" : "var(--text2)",
-                fontSize: "12px",
-                fontWeight: 600,
-                cursor: chip.disabled ? "default" : "pointer",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-                fontFamily: "inherit",
-                opacity: chip.disabled ? 0.4 : 1,
-              }}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* 入力欄 */}
       {isInputVisible && (
         <div
@@ -609,11 +586,18 @@ export default function ChatRoom({
         </div>
       )}
 
-      <SchedulePollSetupSheet
-        open={pollSheetOpen}
-        onClose={() => setPollSheetOpen(false)}
-        answerId={answerId}
-        currentUserId={currentUserId}
+      <AssistDeckDrawer
+        open={deckDrawerOpen}
+        onClose={() => setDeckDrawerOpen(false)}
+        initialIndex={deckDrawerStartIndex}
+        mine={[0, 1, 2, 3, 4, 5].map((i) => assistAnswers[i]?.[currentUserId])}
+        onSubmit={saveAssistAnswer}
+      />
+
+      <StudioProposalDrawer
+        open={studioDrawerOpen}
+        onClose={() => setStudioDrawerOpen(false)}
+        onSubmit={submitStudioProposal}
       />
     </div>
   );

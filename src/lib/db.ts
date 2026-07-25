@@ -141,6 +141,51 @@ export async function upsertSchedulePollResponse(data: SchedulePollResponseInser
   if (error) throw new Error(error.message);
 }
 
+type AssistAnswerInsert = Database["public"]["Tables"]["session_assist_answers"]["Insert"];
+
+export async function upsertAssistAnswer(data: AssistAnswerInsert): Promise<void> {
+  const { createClient } = await import("@/lib/supabase");
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("session_assist_answers")
+    .upsert(data as unknown as never, { onConflict: "answer_id,user_id,card_index" });
+  if (error) throw new Error(error.message);
+}
+
+type StudioProposalInsert = Database["public"]["Tables"]["session_assist_studio_proposals"]["Insert"];
+
+export async function insertStudioProposal(data: StudioProposalInsert): Promise<void> {
+  const { createClient } = await import("@/lib/supabase");
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("session_assist_studio_proposals")
+    .insert(data as unknown as never);
+  if (error) throw new Error(error.message);
+}
+
+export async function chooseStudioSlot(
+  proposalId: string,
+  data: { chosen_index: number; chosen_by: string }
+): Promise<void> {
+  const { createClient } = await import("@/lib/supabase");
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("session_assist_studio_proposals")
+    .update({ ...data, chosen_at: new Date().toISOString() } as unknown as never)
+    .eq("id", proposalId);
+  if (error) throw new Error(error.message);
+}
+
+export async function markStudioBooked(proposalId: string): Promise<void> {
+  const { createClient } = await import("@/lib/supabase");
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("session_assist_studio_proposals")
+    .update({ booked_at: new Date().toISOString() } as unknown as never)
+    .eq("id", proposalId);
+  if (error) throw new Error(error.message);
+}
+
 export async function insertBlock(blockerId: string, blockedId: string): Promise<void> {
   const { createClient } = await import("@/lib/supabase");
   const supabase = createClient();

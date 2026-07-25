@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>our-SESSION / スタジオ枠の提案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#15151a;--card:rgba(26,26,32,.72);--card2:rgba(34,34,42,.7);
+  --text:#f5f5f7;--text2:#9a9aa8;--text3:#5a5a66;
+  --red:#ff2d4a;--red2:#ff5570;--line:rgba(255,255,255,.07);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;}
+body{background:var(--bg);color:var(--text);
+  font-family:'Outfit',-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.aurora{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
+.blob{position:absolute;border-radius:50%;filter:blur(70px);}
+.b1{width:340px;height:340px;background:#3b6cff;opacity:.11;top:-90px;left:-80px;animation:d1 22s ease-in-out infinite;}
+.b2{width:300px;height:300px;background:#9b4dff;opacity:.10;top:34%;right:-110px;animation:d2 26s ease-in-out infinite;}
+.b3{width:320px;height:320px;background:#ff4d9b;opacity:.08;bottom:-110px;left:-40px;animation:d3 30s ease-in-out infinite;}
+@keyframes d1{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,60px)}}
+@keyframes d2{0%,100%{transform:translate(0,0)}50%{transform:translate(-60px,-50px)}}
+@keyframes d3{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,-40px)}}
+
+.phone{position:relative;z-index:1;width:100%;max-width:400px;height:100dvh;max-height:860px;display:flex;flex-direction:column;overflow:hidden;}
+@media(min-width:440px){.phone{border-radius:34px;border:1px solid var(--line);box-shadow:0 40px 80px rgba(0,0,0,.55);}}
+
+.hd{flex:0 0 auto;display:flex;align-items:center;gap:11px;padding:16px 16px 13px;background:rgba(21,21,26,.78);backdrop-filter:blur(20px);border-bottom:1px solid var(--line);}
+.back{color:var(--text2);font-size:22px;line-height:1;padding:2px 4px 4px 0;}
+.avt{width:38px;height:38px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,#3b6cff,#9b4dff);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;}
+.hdtxt .t{font-size:14.5px;font-weight:600;}
+.hdtxt .s{font-size:11.5px;color:var(--text3);margin-top:2px;}
+.hdtxt .s b{color:var(--red2);font-weight:500;}
+
+.scroll{flex:1 1 auto;overflow-y:auto;padding:18px 16px 22px;}
+.scroll::-webkit-scrollbar{width:0;}
+.sys{text-align:center;font-size:11.5px;color:var(--text3);line-height:1.75;margin:2px 0 16px;}
+.sys b{color:var(--text2);font-weight:400;}
+
+.sum{background:var(--card);backdrop-filter:blur(20px);border:1px solid var(--line);border-radius:16px;padding:13px 14px;margin-bottom:12px;}
+.sum .h{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-weight:600;margin-bottom:10px;}
+.sline{display:flex;gap:10px;font-size:12.5px;line-height:1.65;margin-bottom:6px;}
+.sline:last-child{margin-bottom:0;}
+.sline .k{color:var(--text3);flex:0 0 34px;}
+.sline .v{color:var(--text2);}
+.sline .v b{color:var(--red2);font-weight:600;}
+
+/* proposal */
+.prop{background:var(--card);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:15px;margin-bottom:12px;animation:pop .45s cubic-bezier(.2,.9,.25,1.05) both;}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;}
+.pt{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;}
+.by{font-size:10.5px;color:var(--text3);flex:0 0 auto;padding-top:2px;}
+.stu{margin:10px 0 13px;padding:11px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--line);}
+.stu .nm{font-size:14.5px;font-weight:600;letter-spacing:.01em;}
+.stu .meta{font-size:11.5px;color:var(--text3);margin-top:5px;line-height:1.6;}
+.stu a{color:var(--red2);text-decoration:none;border-bottom:1px solid rgba(255,85,112,.4);}
+
+.slot{display:flex;align-items:center;gap:11px;padding:12px 13px;border-radius:13px;border:1px solid var(--line);background:rgba(255,255,255,.028);margin-bottom:8px;transition:all .25s cubic-bezier(.2,.9,.3,1.2);}
+.slot.pick{cursor:pointer;}
+.slot.pick:active{transform:scale(.985);}
+.slot .dot{width:15px;height:15px;border-radius:50%;border:1.5px solid rgba(255,255,255,.2);flex:0 0 auto;position:relative;}
+.slot .d1{font-size:13.5px;font-weight:600;}
+.slot .d1 em{font-style:normal;color:var(--text3);font-size:11.5px;font-weight:400;margin-left:4px;}
+.slot .tm{margin-left:auto;font-size:13px;color:var(--text2);letter-spacing:.01em;}
+.slot.on{background:rgba(255,45,74,.13);border-color:rgba(255,45,74,.5);}
+.slot.on .dot{border-color:var(--red2);}
+.slot.on .dot::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--red2);}
+.slot.on .tm{color:var(--red2);}
+.slot.dim{opacity:.32;}
+.pfoot{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--text3);line-height:1.7;}
+.pfoot b{color:var(--red2);font-weight:600;}
+.pfoot .dots i{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--text3);margin-left:3px;animation:bl 1.3s infinite;}
+.pfoot .dots i:nth-child(2){animation-delay:.18s}.pfoot .dots i:nth-child(3){animation-delay:.36s}
+@keyframes bl{0%,60%,100%{opacity:.25}30%{opacity:1}}
+.fixed{background:rgba(255,45,74,.09);border-color:rgba(255,45,74,.35);}
+.fixed .pt{color:var(--red2);}
+
+.panel{background:var(--card);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:16px;}
+.panel .ttl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);font-weight:600;margin-bottom:11px;}
+.pnote{font-size:12.5px;color:var(--text2);line-height:1.75;margin-bottom:14px;}
+.pnote b{color:var(--text);font-weight:500;}
+.btn{width:100%;border:none;cursor:pointer;font-family:inherit;background:linear-gradient(135deg,var(--red),var(--red2));color:#fff;font-size:14.5px;font-weight:600;border-radius:12px;padding:13px;transition:transform .16s cubic-bezier(.2,.9,.3,1.3),opacity .2s;}
+.btn:active{transform:scale(.97);}
+.btn:disabled{opacity:.3;}
+.quiet{width:100%;background:none;border:none;color:var(--text3);font-family:inherit;font-size:12.5px;padding:13px 0 2px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
+
+.cmp{flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:11px 16px calc(11px + env(safe-area-inset-bottom));background:rgba(21,21,26,.8);backdrop-filter:blur(20px);border-top:1px solid var(--line);}
+.cmp .fake{flex:1 1 auto;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:20px;padding:10px 14px;font-size:13.5px;color:var(--text3);}
+.cmp .snd{width:36px;height:36px;border-radius:50%;background:rgba(255,45,74,.16);color:var(--red2);display:flex;align-items:center;justify-content:center;font-size:15px;}
+
+/* drawer */
+.ovl{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .32s;z-index:20;}
+.ovl.on{opacity:1;pointer-events:auto;}
+.dw{position:absolute;left:0;right:0;bottom:0;z-index:21;background:rgba(24,24,30,.97);backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,.1);border-radius:26px 26px 0 0;padding:10px 18px calc(16px + env(safe-area-inset-bottom));transform:translateY(101%);transition:transform .42s cubic-bezier(.25,.9,.3,1);height:88%;display:flex;flex-direction:column;}
+.dw.on{transform:none;}
+.grip{width:38px;height:4px;border-radius:3px;background:rgba(255,255,255,.16);margin:0 auto 14px;flex:0 0 auto;}
+.dhd{flex:0 0 auto;display:flex;align-items:center;gap:10px;margin-bottom:13px;}
+.dhd .bk{font-size:20px;color:var(--text3);cursor:pointer;line-height:1;}
+.dhd .tt{font-size:17px;font-weight:600;}
+.dhd .stp{margin-left:auto;font-size:11px;color:var(--text3);letter-spacing:.06em;}
+.dbody{flex:1 1 auto;overflow-y:auto;margin:0 -4px;padding:0 4px;}
+.dbody::-webkit-scrollbar{width:0;}
+.dfoot{flex:0 0 auto;padding-top:13px;}
+.glbl{font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin:0 0 9px;font-weight:600;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+.chip{border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text2);font-family:inherit;font-size:13.5px;border-radius:11px;padding:9px 14px;cursor:pointer;transition:all .2s cubic-bezier(.2,.9,.3,1.2);}
+.chip.on{background:rgba(255,45,74,.16);border-color:rgba(255,45,74,.55);color:#fff;transform:translateY(-1px);}
+.chip.sm{font-size:12.5px;padding:8px 12px;}
+
+.slist .it{display:flex;align-items:center;gap:11px;padding:13px 13px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.028);margin-bottom:8px;cursor:pointer;transition:all .2s;}
+.slist .it.on{background:rgba(255,45,74,.13);border-color:rgba(255,45,74,.5);}
+.slist .it .nm{font-size:14px;font-weight:500;}
+.slist .it .sub{font-size:11px;color:var(--text3);margin-top:3px;}
+.slist .it .ck{margin-left:auto;color:var(--red2);font-size:15px;opacity:0;}
+.slist .it.on .ck{opacity:1;}
+
+/* calendar */
+.cal{margin-bottom:6px;}
+.calhd{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+.calhd .m{font-size:15px;font-weight:600;letter-spacing:.02em;}
+.calhd button{background:none;border:1px solid var(--line);color:var(--text2);font-family:inherit;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:14px;}
+.calhd button:disabled{opacity:.25;}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.wd{text-align:center;font-size:10.5px;color:var(--text3);padding:4px 0 6px;letter-spacing:.04em;}
+.wd.s{color:var(--red2);}
+.cell{aspect-ratio:1/1;border:1px solid transparent;border-radius:10px;background:rgba(255,255,255,.03);
+  display:flex;align-items:center;justify-content:center;font-size:13.5px;color:var(--text2);
+  cursor:pointer;transition:all .18s cubic-bezier(.2,.9,.3,1.2);position:relative;}
+.cell.void{background:none;cursor:default;}
+.cell.off{opacity:.2;cursor:default;background:none;}
+.cell.we{color:#fff;}
+.cell.on{background:rgba(255,45,74,.2);border-color:rgba(255,45,74,.6);color:#fff;font-weight:600;transform:scale(1.04);}
+.cell.has::after{content:'';position:absolute;bottom:5px;width:4px;height:4px;border-radius:50%;background:var(--red2);}
+
+.tmwrap{margin-top:16px;padding-top:15px;border-top:1px solid var(--line);}
+.picked{display:flex;align-items:center;gap:9px;margin-bottom:14px;}
+.picked .bg{font-size:20px;font-weight:700;letter-spacing:-.01em;}
+.picked .bg em{font-style:normal;font-size:12.5px;color:var(--text3);font-weight:400;margin-left:6px;}
+
+.added{margin-bottom:4px;}
+.added .row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;background:rgba(255,45,74,.1);border:1px solid rgba(255,45,74,.28);margin-bottom:7px;}
+.added .row .t1{font-size:13.5px;font-weight:600;}
+.added .row .t2{margin-left:auto;font-size:13px;color:var(--red2);}
+.added .row .x{color:var(--text3);font-size:16px;cursor:pointer;padding-left:3px;}
+.cnt{display:flex;align-items:baseline;gap:5px;margin-bottom:11px;}
+.cnt b{font-size:24px;font-weight:700;line-height:1;background:linear-gradient(135deg,var(--red),var(--red2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.cnt span{font-size:11.5px;color:var(--text3);}
+
+input[type=text],input[type=number]{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:11px;color:var(--text);font-family:inherit;font-size:14px;padding:11px 12px;outline:none;margin-bottom:15px;}
+input:focus{border-color:rgba(255,45,74,.5);}
+input::placeholder{color:var(--text3);}
+.note{font-size:11px;color:var(--text3);line-height:1.65;margin:-9px 0 15px;}
+
+/* dev */
+.dev{position:absolute;top:9px;right:10px;z-index:30;}
+.devbtn{background:rgba(0,0,0,.45);border:1px solid var(--line);color:var(--text3);font-family:inherit;font-size:10.5px;border-radius:20px;padding:5px 10px;cursor:pointer;backdrop-filter:blur(10px);}
+.devbody{margin-top:7px;width:224px;padding:13px;border-radius:14px;background:rgba(20,20,26,.96);border:1px solid var(--line);backdrop-filter:blur(20px);display:none;}
+.devbody.on{display:block;}
+.devbody .h{font-size:10px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:10px;}
+.seg{display:flex;gap:6px;margin-bottom:12px;}
+.seg button{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--text3);font-family:inherit;font-size:11.5px;border-radius:9px;padding:8px 0;cursor:pointer;}
+.seg button.on{background:rgba(255,45,74,.16);border-color:rgba(255,45,74,.5);color:#fff;}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
+.sw span{font-size:12px;color:var(--text2);}
+.tog{width:38px;height:22px;border-radius:12px;background:rgba(255,255,255,.12);position:relative;flex:0 0 auto;cursor:pointer;transition:background .22s;}
+.tog::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--text2);transition:all .22s;}
+.tog.on{background:rgba(255,45,74,.4);}
+.tog.on::after{transform:translateX(16px);background:var(--red2);}
+.devbody .mini{width:100%;background:transparent;border:1px solid var(--line);color:var(--text2);font-family:inherit;font-size:12px;border-radius:9px;padding:8px;cursor:pointer;}
+
+.toast{position:absolute;left:16px;right:16px;bottom:76px;z-index:15;background:rgba(38,38,46,.96);backdrop-filter:blur(20px);border:1px solid rgba(255,45,74,.3);border-radius:14px;padding:12px 14px;font-size:12.5px;opacity:0;transform:translateY(10px);pointer-events:none;transition:all .35s;}
+.toast.on{opacity:1;transform:none;}
+.toast b{color:var(--red2);font-weight:600;}
+
+@keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+</style>
+</head>
+<body>
+
+<div class="aurora"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<div class="phone">
+  <div class="dev">
+    <button class="devbtn" id="devbtn">試す設定</button>
+    <div class="devbody" id="devbody">
+      <div class="h">視点</div>
+      <div class="seg"><button id="rHost" class="on">ホスト</button><button id="rGuest">ゲスト</button></div>
+      <div class="sw"><span>相手が自動で<br>選んでくれる</span><div class="tog on" id="togAuto"></div></div>
+      <button class="mini" id="rst">最初からやり直す</button>
+    </div>
+  </div>
+
+  <div class="hd">
+    <div class="back">‹</div>
+    <div class="avt" id="avt">ユ</div>
+    <div class="hdtxt">
+      <div class="t" id="hdname">ばらの花 × ユキさん</div>
+      <div class="s" id="hdrole">あなたは<b>ホスト</b></div>
+    </div>
+  </div>
+
+  <div class="scroll" id="scroll">
+    <div class="sys">セッションアシストの6枚が、ぜんぶひらきました。</div>
+    <div class="sum">
+      <div class="h">アシストのまとめ</div>
+      <div class="sline"><div class="k">時間</div><div class="v">2人とも <b>週末昼</b> を選びました</div></div>
+      <div class="sline"><div class="k">場所</div><div class="v">あなた「心斎橋か難波ならいけます」<br>ユキさん「心斎橋あたりでよく借りてます」</div></div>
+    </div>
+    <div id="props"></div>
+    <div class="panel" id="panel"></div>
+  </div>
+
+  <div class="cmp"><div class="fake">メッセージを入力</div><div class="snd">↑</div></div>
+
+  <div class="toast" id="toast"></div>
+  <div class="ovl" id="ovl"></div>
+  <div class="dw" id="dw"><div class="grip"></div><div id="dwbody" style="display:flex;flex-direction:column;flex:1 1 auto;min-height:0;"></div></div>
+</div>
+
+<script>
+/* ===== データ（Step1はエリア×大手だけ。無ければ自分で入力） ===== */
+const AREAS = {
+  "大阪":{
+    "心斎橋":[
+      {n:"ベースオントップ 心斎橋店", s:"心斎橋駅 徒歩3分"},
+      {n:"スタジオ246 心斎橋", s:"心斎橋駅 徒歩5分"}
+    ],
+    "難波":[
+      {n:"サウンドスタジオノア 難波店", s:"なんば駅 徒歩4分"},
+      {n:"スタジオりんご 難波", s:"日本橋駅 徒歩6分"}
+    ],
+    "梅田":[
+      {n:"ベースオントップ 梅田店", s:"梅田駅 徒歩5分"}
+    ]
+  },
+  "東京":{
+    "新宿":[
+      {n:"サウンドスタジオノア 新宿店", s:"新宿駅 徒歩6分"},
+      {n:"スタジオペンタ 新宿", s:"新宿三丁目駅 徒歩3分"}
+    ],
+    "高田馬場":[
+      {n:"スタジオノア 高田馬場店", s:"高田馬場駅 徒歩2分"}
+    ]
+  }
+};
+const WD = ["日","月","火","水","木","金","土"];
+const TODAY = new Date(2026,6,24);          // 2026/7/24(金)
+const HOURS = [];
+for(let h=10;h<=22;h++) HOURS.push(h);
+
+let role="host", auto=true, timer=null;
+let proposal=null;   // {by, studio, area, fee, url, slots:[{y,m,d,wd,start,dur}], chosen, booked}
+
+/* wizard state */
+let W = {};
+function resetW(){ W = {step:1, pref:null, area:null, studio:null, custom:"", calY:2026, calM:7, day:null, start:null, dur:2, slots:[], fee:"", url:""}; }
+resetW();
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const other = () => role==="host" ? "ユキさん" : "ハルオさん";
+const fmtT = (h,dur) => `${h}:00〜${h+dur}:00`;
+const slotKey = s => `${s.m}/${s.d}|${s.start}|${s.dur}`;
+
+/* ===== チャット側 ===== */
+function renderProps(){
+  const box=$('props');
+  if(!proposal){ box.innerHTML=""; return; }
+  const mineProp = proposal.by===role;
+  const canPick = !mineProp && proposal.chosen===null;
+
+  const slots = proposal.slots.map((s,i)=>{
+    const on = proposal.chosen===i, dim = proposal.chosen!==null && !on;
+    return `<div class="slot ${canPick?'pick':''} ${on?'on':''} ${dim?'dim':''}" data-i="${i}">
+      <div class="dot"></div>
+      <div class="d1">${s.m}/${s.d} <em>(${s.wd})</em></div>
+      <div class="tm">${fmtT(s.start,s.dur)}</div></div>`;
+  }).join("");
+
+  let foot;
+  if(proposal.booked){
+    const s=proposal.slots[proposal.chosen];
+    foot = `<b>${s.m}/${s.d}(${s.wd}) ${fmtT(s.start,s.dur)}</b><br>
+      ${esc(proposal.studio)} を押さえました。当日よろしくお願いします。`;
+  }else if(proposal.chosen===null){
+    foot = mineProp
+      ? `${esc(other())}の返事まち<span class="dots"><i></i><i></i><i></i></span><br>急かさなくて大丈夫です。`
+      : `行ける枠をひとつ選んでください。`;
+  }else{
+    const s=proposal.slots[proposal.chosen];
+    foot = mineProp
+      ? `${esc(other())}が <b>${s.m}/${s.d} ${fmtT(s.start,s.dur)}</b> を選びました。<br>スタジオを押さえたら教えてあげてください。`
+      : `<b>${s.m}/${s.d} ${fmtT(s.start,s.dur)}</b> を選びました。<br>${esc(other())}が押さえるのを待っています。`;
+  }
+
+  box.innerHTML = `<div class="prop ${proposal.booked?'fixed':''}">
+    <div class="ph">
+      <div class="pt">${proposal.booked?'✓ 予約できました':'🎧 スタジオの空き枠'}</div>
+      <div class="by">${mineProp?"あなたが出しました":esc(other())+"が出しました"}</div>
+    </div>
+    <div class="stu">
+      <div class="nm">${esc(proposal.studio)}</div>
+      <div class="meta">${esc(proposal.area)}${proposal.fee?` ・ ${esc(proposal.fee)}円 / 1時間`:``}
+        ${proposal.url?`<br><a href="${esc(proposal.url)}" target="_blank" rel="noopener">店舗ページを見る ↗</a>`:``}</div>
+    </div>
+    ${slots}
+    <div class="pfoot">${foot}</div></div>`;
+
+  if(canPick){
+    box.querySelectorAll('.slot').forEach(el=> el.onclick = ()=> choose(+el.dataset.i));
+  }
+}
+
+function choose(i){
+  if(!proposal||proposal.chosen!==null) return;
+  proposal.chosen=i; clearTimeout(timer);
+  renderProps(); renderPanel();
+  const s=proposal.slots[i];
+  toast(`<b>${s.m}/${s.d} ${fmtT(s.start,s.dur)}</b> を選びました`);
+  setTimeout(()=> $('scroll').scrollTop=$('scroll').scrollHeight,200);
+}
+
+/* ===== パネル ===== */
+function renderPanel(){
+  const p=$('panel');
+  if(!proposal){
+    if(role==="host"){
+      p.innerHTML=`<div class="ttl">次のステップ</div>
+        <div class="pnote">スタジオを決めて、空いている枠を出しましょう。<br><b>最大3つ</b>まで出せます。</div>
+        <button class="btn" id="go">スタジオの空き枠を出す</button>`;
+    }else{
+      p.innerHTML=`<div class="ttl">次のステップ</div>
+        <div class="pnote">ハルオさんがスタジオを調べています。<br>もちろん、自分から出してもかまいません。</div>
+        <button class="quiet" id="go">自分から空き枠を出す</button>`;
+    }
+    $('go').onclick=()=>{ resetW(); openDrawer(); };
+    return;
+  }
+  if(proposal.booked){
+    const s=proposal.slots[proposal.chosen];
+    p.innerHTML=`<div class="ttl">確定しました</div>
+      <div class="pnote"><b>${s.m}/${s.d}(${s.wd}) ${fmtT(s.start,s.dur)}</b><br>${esc(proposal.studio)}<br>
+      当日はスタジオで会いましょう。</div>
+      <button class="quiet" id="re">最初からやり直す</button>`;
+    $('re').onclick=reset; return;
+  }
+  if(proposal.chosen===null){
+    p.innerHTML=`<div class="ttl">次のステップ</div>
+      <div class="pnote">${proposal.by===role?`${esc(other())}が枠を選ぶのを待っています。`:`上の枠からひとつ選んでください。`}</div>`;
+    return;
+  }
+  const s=proposal.slots[proposal.chosen];
+  if(proposal.by===role){
+    p.innerHTML=`<div class="ttl">最後のステップ</div>
+      <div class="pnote"><b>${s.m}/${s.d}(${s.wd}) ${fmtT(s.start,s.dur)}</b> に決まりました。<br>
+        ${esc(proposal.studio)} を予約したら、下のボタンで知らせてください。</div>
+      <button class="btn" id="bk">スタジオを押さえた</button>
+      <button class="quiet" id="re">枠を出しなおす</button>`;
+    $('bk').onclick=()=>{ proposal.booked=true; renderProps(); renderPanel();
+      toast(`<b>予約が確定しました</b>`); setTimeout(()=>$('scroll').scrollTop=$('scroll').scrollHeight,200); };
+    $('re').onclick=()=>{ proposal=null; renderProps(); renderPanel(); };
+  }else{
+    p.innerHTML=`<div class="ttl">次のステップ</div>
+      <div class="pnote">${esc(other())}がスタジオを押さえるのを待っています。</div>`;
+  }
+}
+
+/* ===== ドロワー（ウィザード） ===== */
+function openDrawer(){ renderDW(); $('ovl').classList.add('on'); $('dw').classList.add('on'); }
+function closeDrawer(){ $('ovl').classList.remove('on'); $('dw').classList.remove('on'); }
+
+function renderDW(){
+  const titles={1:"スタジオを決める",2:"空いている枠を出す",3:"料金とリンク"};
+  let body="",foot="";
+
+  /* --- step1 --- */
+  if(W.step===1){
+    body=`<div class="glbl">都道府県</div><div class="chips">
+      ${Object.keys(AREAS).map(p=>`<button class="chip ${W.pref===p?'on':''}" data-pref="${p}">${p}</button>`).join("")}
+    </div>`;
+    if(W.pref){
+      body+=`<div class="glbl">エリア</div><div class="chips">
+        ${Object.keys(AREAS[W.pref]).map(a=>`<button class="chip sm ${W.area===a?'on':''}" data-area="${a}">${a}</button>`).join("")}
+      </div>`;
+    }
+    if(W.pref&&W.area){
+      body+=`<div class="glbl">スタジオ</div><div class="slist">
+        ${AREAS[W.pref][W.area].map((s,i)=>`<div class="it ${W.studio===s.n?'on':''}" data-st="${i}">
+          <div><div class="nm">${esc(s.n)}</div><div class="sub">${esc(s.s)}</div></div><div class="ck">✓</div></div>`).join("")}
+        <div class="it ${W.studio==="__c"?'on':''}" data-st="c">
+          <div><div class="nm">その他（自分で入力）</div><div class="sub">リストにないスタジオ</div></div><div class="ck">✓</div></div>
+      </div>`;
+      if(W.studio==="__c"){
+        body+=`<div style="margin-top:12px;"><input type="text" id="cst" placeholder="スタジオ名" value="${esc(W.custom)}"></div>`;
+      }
+    }
+    const ok = W.studio && (W.studio!=="__c" || W.custom.trim());
+    foot=`<button class="btn" id="nx" ${ok?'':'disabled'}>枠をえらぶ</button>
+          <button class="quiet" id="cls">あとにする</button>`;
+  }
+
+  /* --- step2 --- */
+  if(W.step===2){
+    body=calendarHTML();
+    if(W.day){
+      const d=new Date(W.calY,W.calM-1,W.day);
+      body+=`<div class="tmwrap">
+        <div class="picked"><div class="bg">${W.calM}/${W.day}<em>(${WD[d.getDay()]})</em></div></div>
+        <div class="glbl">開始時刻</div><div class="chips">
+          ${HOURS.map(h=>`<button class="chip sm ${W.start===h?'on':''}" data-h="${h}">${h}:00</button>`).join("")}
+        </div>
+        <div class="glbl">利用時間</div><div class="chips">
+          ${[1,2,3].map(t=>`<button class="chip sm ${W.dur===t?'on':''}" data-d="${t}">${t}時間</button>`).join("")}
+        </div>
+        <button class="btn" id="add" ${W.start===null?'disabled':''} style="margin-bottom:6px;">
+          ${W.start!==null?`${W.calM}/${W.day} ${fmtT(W.start,W.dur)} を追加`:`開始時刻をえらぶ`}</button>
+      </div>`;
+    }
+    if(W.slots.length){
+      body+=`<div class="tmwrap"><div class="cnt"><b>${W.slots.length}</b><span>/ 3 出す枠</span></div>
+        <div class="added">${W.slots.map((s,i)=>`<div class="row">
+          <div class="t1">${s.m}/${s.d} (${s.wd})</div><div class="t2">${fmtT(s.start,s.dur)}</div>
+          <div class="x" data-x="${i}">✕</div></div>`).join("")}</div></div>`;
+    }
+    foot=`<button class="btn" id="nx" ${W.slots.length?'':'disabled'}>${W.slots.length?`次へ`:`枠を追加してください`}</button>
+          <button class="quiet" id="cls">あとにする</button>`;
+  }
+
+  /* --- step3 --- */
+  if(W.step===3){
+    body=`<div class="glbl">1時間あたりの料金（任意）</div>
+      <input type="number" id="fee" placeholder="1500" value="${esc(W.fee)}">
+      <div class="glbl">店舗ページのリンク（任意）</div>
+      <input type="text" id="url" placeholder="https://" value="${esc(W.url)}">
+      <div class="note">どちらも空のままで送れます。<br>相手が見るのは、スタジオ名と枠だけです。</div>
+      <div class="glbl">送る内容</div>
+      <div class="stu" style="margin:0 0 10px;">
+        <div class="nm">${esc(studioName())}</div>
+        <div class="meta">${esc(W.pref+" "+W.area)}</div>
+      </div>
+      ${W.slots.map(s=>`<div class="slot"><div class="dot"></div>
+        <div class="d1">${s.m}/${s.d} <em>(${s.wd})</em></div>
+        <div class="tm">${fmtT(s.start,s.dur)}</div></div>`).join("")}`;
+    foot=`<button class="btn" id="send">この内容で送る</button>
+          <button class="quiet" id="cls">あとにする</button>`;
+  }
+
+  $('dwbody').innerHTML=`
+    <div class="dhd">
+      ${W.step>1?`<div class="bk" id="bk">‹</div>`:``}
+      <div class="tt">${titles[W.step]}</div>
+      <div class="stp">${W.step} / 3</div>
+    </div>
+    <div class="dbody" id="dbody">${body}</div>
+    <div class="dfoot">${foot}</div>`;
+
+  bindDW();
+}
+
+function studioName(){
+  if(W.studio==="__c") return W.custom.trim();
+  return W.studio||"";
+}
+
+function calendarHTML(){
+  const first=new Date(W.calY,W.calM-1,1);
+  const days=new Date(W.calY,W.calM,0).getDate();
+  const lead=first.getDay();
+  let cells="";
+  for(let k=0;k<lead;k++) cells+=`<div class="cell void"></div>`;
+  for(let d=1;d<=days;d++){
+    const dt=new Date(W.calY,W.calM-1,d);
+    const past = dt <= TODAY;
+    const we = dt.getDay()===0||dt.getDay()===6;
+    const has = W.slots.some(s=>s.m===W.calM&&s.d===d);
+    cells+=`<div class="cell ${past?'off':''} ${we?'we':''} ${W.day===d?'on':''} ${has?'has':''}" ${past?'':`data-day="${d}"`}>${d}</div>`;
+  }
+  const canPrev = !(W.calY===2026&&W.calM===7);
+  return `<div class="cal">
+    <div class="calhd">
+      <button id="pm" ${canPrev?'':'disabled'}>‹</button>
+      <div class="m">${W.calY}年 ${W.calM}月</div>
+      <button id="nm2">›</button>
+    </div>
+    <div class="grid">${WD.map((w,i)=>`<div class="wd ${i===0||i===6?'s':''}">${w}</div>`).join("")}${cells}</div>
+  </div>`;
+}
+
+function bindDW(){
+  const bk=$('bk'); if(bk) bk.onclick=()=>{ W.step--; renderDW(); };
+  const cls=$('cls'); if(cls) cls.onclick=closeDrawer;
+
+  const body=$('dbody');
+  body.onclick = e => {
+    const pf=e.target.closest('[data-pref]');
+    if(pf){ W.pref=pf.dataset.pref; W.area=null; W.studio=null; return renderDW(); }
+    const ar=e.target.closest('[data-area]');
+    if(ar){ W.area=ar.dataset.area; W.studio=null; return renderDW(); }
+    const st=e.target.closest('[data-st]');
+    if(st){
+      W.studio = st.dataset.st==="c" ? "__c" : AREAS[W.pref][W.area][+st.dataset.st].n;
+      return renderDW();
+    }
+    const dy=e.target.closest('[data-day]');
+    if(dy){ W.day=+dy.dataset.day; W.start=null; return renderDW(); }
+    const h=e.target.closest('[data-h]');
+    if(h){ W.start=+h.dataset.h; return renderDW(); }
+    const du=e.target.closest('[data-d]');
+    if(du){ W.dur=+du.dataset.d; return renderDW(); }
+    const x=e.target.closest('[data-x]');
+    if(x){ W.slots.splice(+x.dataset.x,1); return renderDW(); }
+    if(e.target.id==="pm"){ W.calM--; if(W.calM<1){W.calM=12;W.calY--;} W.day=null; return renderDW(); }
+    if(e.target.id==="nm2"){ W.calM++; if(W.calM>12){W.calM=1;W.calY++;} W.day=null; return renderDW(); }
+  };
+
+  const cst=$('cst'); if(cst) cst.oninput=e=>{ W.custom=e.target.value; const n=$('nx'); if(n) n.disabled=!e.target.value.trim(); };
+  const fee=$('fee'); if(fee) fee.oninput=e=> W.fee=e.target.value;
+  const url=$('url'); if(url) url.oninput=e=> W.url=e.target.value;
+
+  const add=$('add');
+  if(add) add.onclick=()=>{
+    if(W.start===null||W.slots.length>=3) return;
+    const dt=new Date(W.calY,W.calM-1,W.day);
+    const s={y:W.calY,m:W.calM,d:W.day,wd:WD[dt.getDay()],start:W.start,dur:W.dur};
+    if(W.slots.some(x=>slotKey(x)===slotKey(s))) return;
+    W.slots.push(s);
+    W.slots.sort((a,b)=> (a.m-b.m)||(a.d-b.d)||(a.start-b.start));
+    W.day=null; W.start=null;
+    renderDW();
+    $('dbody').scrollTop=$('dbody').scrollHeight;
+  };
+
+  const nx=$('nx');
+  if(nx) nx.onclick=()=>{ W.step++; renderDW(); $('dbody').scrollTop=0; };
+
+  const send=$('send');
+  if(send) send.onclick=()=>{
+    proposal={ by:role, studio:studioName(), area:`${W.pref} ${W.area}`,
+      fee:W.fee.trim?W.fee.trim():W.fee, url:W.url.trim(), slots:[...W.slots], chosen:null, booked:false };
+    closeDrawer(); renderProps(); renderPanel();
+    setTimeout(()=> $('scroll').scrollTop=$('scroll').scrollHeight,260);
+    if(auto){
+      clearTimeout(timer);
+      timer=setTimeout(()=>{
+        if(!proposal||proposal.chosen!==null) return;
+        let i=proposal.slots.findIndex(s=>{
+          const dt=new Date(s.y,s.m-1,s.d);
+          return (dt.getDay()===0||dt.getDay()===6) && s.start<16;
+        });
+        if(i<0) i=0;
+        choose(i);
+      },5200);
+    }
+  };
+}
+
+function toast(html){
+  const t=$('toast'); t.innerHTML=html; t.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),2800);
+}
+
+/* dev */
+$('devbtn').onclick=()=>$('devbody').classList.toggle('on');
+$('togAuto').onclick=e=>{ auto=!auto; e.currentTarget.classList.toggle('on',auto); };
+$('rHost').onclick=()=>setRole("host");
+$('rGuest').onclick=()=>setRole("guest");
+$('rst').onclick=reset;
+$('ovl').onclick=closeDrawer;
+
+function setRole(r){
+  role=r;
+  $('rHost').classList.toggle('on',r==="host");
+  $('rGuest').classList.toggle('on',r==="guest");
+  $('hdname').textContent = r==="host"?"ばらの花 × ユキさん":"ばらの花 × ハルオさん";
+  $('avt').textContent = r==="host"?"ユ":"ハ";
+  $('hdrole').innerHTML = r==="host"?`あなたは<b>ホスト</b>`:`あなたは<b>ゲスト</b>`;
+  renderProps(); renderPanel();
+}
+function reset(){
+  clearTimeout(timer); proposal=null; resetW(); closeDrawer();
+  renderProps(); renderPanel(); $('scroll').scrollTop=0;
+}
+setRole("host");
+</script>
+</body>
+</html>
