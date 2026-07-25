@@ -104,6 +104,11 @@ delete from public.schedule_polls where answer_id is null;
 alter table public.schedule_polls
   alter column answer_id set not null;
 
+-- schedule_poll_responses 側の旧FKが schedule_polls の unique制約に依存しているため、
+-- 先にFKを外してから unique制約を張り替える(順序が逆だと 2BP01 で失敗する)。
+alter table public.schedule_poll_responses
+  drop constraint if exists schedule_poll_responses_poll_id_session_id_fkey;
+
 alter table public.schedule_polls
   drop constraint if exists schedule_polls_id_session_id_key;
 alter table public.schedule_polls
@@ -135,8 +140,6 @@ delete from public.schedule_poll_responses where answer_id is null;
 alter table public.schedule_poll_responses
   alter column answer_id set not null;
 
-alter table public.schedule_poll_responses
-  drop constraint if exists schedule_poll_responses_poll_id_session_id_fkey;
 alter table public.schedule_poll_responses
   add constraint schedule_poll_responses_poll_id_answer_id_fkey
   foreign key (poll_id, answer_id) references public.schedule_polls (id, answer_id) on delete cascade;

@@ -24,6 +24,30 @@ create index session_assist_answers_answer_id_idx on public.session_assist_answe
 
 alter table public.session_assist_answers enable row level security;
 
+-- 「自分がそのcard_indexに回答済みか」をRLSの外側(SECURITY DEFINER)で判定するヘルパー。
+-- ポリシーのUSING句から同じテーブルを直接サブクエリすると、そのサブクエリ自体に
+-- 同じポリシーが再帰的に適用され "infinite recursion detected in policy" になるため、
+-- テーブル所有者権限で実行してRLS評価を挟まないようにする。
+create or replace function public.session_assist_has_answered(
+  p_answer_id uuid,
+  p_card_index smallint,
+  p_user_id uuid
+) returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.session_assist_answers
+    where answer_id = p_answer_id
+      and card_index = p_card_index
+      and user_id = p_user_id
+  );
+$$;
+
+grant execute on function public.session_assist_has_answered(uuid, smallint, uuid) to authenticated;
+
 -- 読み取り: room participant であることに加え、
 -- 自分の回答 or 同じcard_indexへの自分の回答が既にある(=開封済み)場合のみ他人の行が見える。
 -- 「開封はカード単位・両者が答えた瞬間だけ」をDB層でも強制する。
@@ -38,12 +62,7 @@ create policy "session_assist_answers: room participants read own or opened"
     )
     and (
       user_id = auth.uid()
-      or exists (
-        select 1 from public.session_assist_answers mine
-        where mine.answer_id = session_assist_answers.answer_id
-          and mine.user_id = auth.uid()
-          and mine.card_index = session_assist_answers.card_index
-      )
+      or public.session_assist_has_answered(session_assist_answers.answer_id, session_assist_answers.card_index, auth.uid())
     )
   );
 
