@@ -60,7 +60,9 @@ export default function ChatRoom({
   const [choosingId, setChoosingId] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [pendingAnswer, setPendingAnswer] = useState<PendingAnswerWithSender | null>(initialPendingAnswer);
-  const [chatVisible, setChatVisible] = useState(role !== "host" || !initialPendingAnswer);
+  const [chatVisible, setChatVisible] = useState(
+    role === "guest" || (role === "host" && !initialPendingAnswer)
+  );
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
