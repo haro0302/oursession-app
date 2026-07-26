@@ -49,34 +49,23 @@ export default function SessionAssistPanel({
     return { done: doneCount, opened: openedCount, firstUnanswered: first };
   }, [assistAnswers, currentUserId, partnerId]);
 
-  const deckComplete = done === ASSIST_DECK_LENGTH && opened === ASSIST_DECK_LENGTH;
-
-  if (!deckComplete) {
-    let label: string;
-    let note: string;
-    if (done === 0) {
-      label = "セッションアシストを始める";
-      note = "音楽の話から、会う場所と時間まで。6枚のお題を、自分のペースで答えられます。相手の回答は、お互い答えたカードから順にひらきます。";
-    } else if (done < ASSIST_DECK_LENGTH) {
-      label = "つづきに答える";
-      note = `あと${ASSIST_DECK_LENGTH - done}枚。相手を待たずに進められます。\nひらいたカード ${opened} / ${ASSIST_DECK_LENGTH}`;
-    } else {
-      label = "答えを見直す";
-      note = `6枚ぜんぶ答えました。\n${partnerNickname}さんが答えたカードから順にひらきます。\nひらいたカード ${opened} / ${ASSIST_DECK_LENGTH}`;
-    }
-
-    return (
-      <Panel>
-        <PanelHeader title="セッションアシスト" done={done} />
-        <div style={{ fontSize: "12.5px", color: "var(--text2)", lineHeight: 1.75, marginBottom: "14px", whiteSpace: "pre-line" }}>
-          {note}
-        </div>
-        <PrimaryButton onClick={() => onOpenDeck(firstUnanswered === -1 ? 0 : firstUnanswered)}>{label}</PrimaryButton>
-      </Panel>
-    );
+  // ── カード1: お題デッキ(常時表示、内容は進捗で変化) ──
+  let deckLabel: string;
+  let deckNote: string;
+  if (done === 0) {
+    deckLabel = "セッションアシストを始める";
+    deckNote = "6枚のお題で自己紹介！";
+  } else if (done < ASSIST_DECK_LENGTH) {
+    deckLabel = "つづきに答える";
+    deckNote = `あと${ASSIST_DECK_LENGTH - done}枚。相手を待たずに進められます。\nひらいたカード ${opened} / ${ASSIST_DECK_LENGTH}`;
+  } else {
+    deckLabel = "答えを見直す";
+    deckNote = `6枚ぜんぶ答えました。\n${partnerNickname}さんが答えたカードから順にひらきます。\nひらいたカード ${opened} / ${ASSIST_DECK_LENGTH}`;
   }
 
-  // デッキ全開封後: 場所・時間の材料 + スタジオ枠提案
+  const deckFullyOpened = done === ASSIST_DECK_LENGTH && opened === ASSIST_DECK_LENGTH;
+
+  // カード6(時間帯)・カード5(場所)は、デッキが両者とも全開封したときだけ material として出す
   const mineTime = (assistAnswers[5]?.[currentUserId] as string[]) ?? [];
   const partnerTime = (assistAnswers[5]?.[partnerId] as string[]) ?? [];
   const overlap = timeOverlap(mineTime, partnerTime);
@@ -89,77 +78,76 @@ export default function SessionAssistPanel({
   return (
     <>
       <Panel>
-        <PanelHeader title="会う場所と時間の材料" done={ASSIST_DECK_LENGTH} />
-        <SummaryLine label="時間">
-          {overlap.length > 0 ? (
-            <>2人とも <b style={{ color: "var(--red2)" }}>{overlap.join(" / ")}</b> を選びました</>
-          ) : (
-            "重なった時間帯はありませんでした"
-          )}
-        </SummaryLine>
-        <SummaryLine label="場所">
-          あなた「{mineLocation}」
-          <br />
-          {partnerNickname}さん「{partnerLocation}」
-        </SummaryLine>
+        <PanelHeader title="セッションアシスト" done={done} />
+        <div style={{ fontSize: "12.5px", color: "var(--text2)", lineHeight: 1.75, marginBottom: "14px", whiteSpace: "pre-line" }}>
+          {deckNote}
+        </div>
+        <PrimaryButton onClick={() => onOpenDeck(firstUnanswered === -1 ? 0 : firstUnanswered)}>{deckLabel}</PrimaryButton>
+
+        {deckFullyOpened && (
+          <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--border)" }}>
+            <div style={{ fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text3)", fontWeight: 600, marginBottom: "12px" }}>
+              会う場所と時間の材料
+            </div>
+            <SummaryLine label="時間">
+              {overlap.length > 0 ? (
+                <>2人とも <b style={{ color: "var(--red2)" }}>{overlap.join(" / ")}</b> を選びました</>
+              ) : (
+                "重なった時間帯はありませんでした"
+              )}
+            </SummaryLine>
+            <SummaryLine label="場所">
+              あなた「{mineLocation}」
+              <br />
+              {partnerNickname}さん「{partnerLocation}」
+            </SummaryLine>
+          </div>
+        )}
       </Panel>
 
-      {historicalProposals.map((p) => (
-        <StudioProposalCard
-          key={p.id}
-          proposal={p}
-          currentUserId={currentUserId}
-          partnerNickname={partnerNickname}
-          role={role}
-          interactive={false}
-          choosing={false}
-          booking={false}
-          onChoose={() => {}}
-          onMarkBooked={() => {}}
-          onRedo={() => {}}
-        />
-      ))}
+      {/* ── カード2: スタジオ枠提案(常時表示。提案が無い間、ゲストには何も出さない) ── */}
+      {(role === "host" || studioProposals.length > 0) && (
+        <>
+          {historicalProposals.map((p) => (
+            <StudioProposalCard
+              key={p.id}
+              proposal={p}
+              currentUserId={currentUserId}
+              partnerNickname={partnerNickname}
+              role={role}
+              interactive={false}
+              choosing={false}
+              booking={false}
+              onChoose={() => {}}
+              onMarkBooked={() => {}}
+              onRedo={() => {}}
+            />
+          ))}
 
-      {activeProposal ? (
-        <StudioProposalCard
-          proposal={activeProposal}
-          currentUserId={currentUserId}
-          partnerNickname={partnerNickname}
-          role={role}
-          interactive
-          choosing={choosingId === activeProposal.id}
-          booking={bookingId === activeProposal.id}
-          onChoose={(index) => onChooseSlot(activeProposal.id, index)}
-          onMarkBooked={() => onMarkBooked(activeProposal.id)}
-          onRedo={onOpenStudioDrawer}
-        />
-      ) : (
-        <Panel>
-          <div style={{ fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text3)", fontWeight: 600, marginBottom: "11px" }}>
-            次のステップ
-          </div>
-          {role === "host" ? (
-            <>
-              <div style={{ fontSize: "12.5px", color: "var(--text2)", lineHeight: 1.75, marginBottom: "14px" }}>
-                スタジオを決めて、空いている枠を出しましょう。最大3つまで出せます。
-              </div>
-              <PrimaryButton onClick={onOpenStudioDrawer}>スタジオの空き枠を出す</PrimaryButton>
-            </>
+          {activeProposal ? (
+            <StudioProposalCard
+              proposal={activeProposal}
+              currentUserId={currentUserId}
+              partnerNickname={partnerNickname}
+              role={role}
+              interactive
+              choosing={choosingId === activeProposal.id}
+              booking={bookingId === activeProposal.id}
+              onChoose={(index) => onChooseSlot(activeProposal.id, index)}
+              onMarkBooked={() => onMarkBooked(activeProposal.id)}
+              onRedo={onOpenStudioDrawer}
+            />
           ) : (
-            <>
-              <div style={{ fontSize: "12.5px", color: "var(--text2)", lineHeight: 1.75, marginBottom: "14px" }}>
-                {partnerNickname}さんがスタジオを調べています。もちろん、自分から出してもかまいません。
-              </div>
-              <button
-                type="button"
-                onClick={onOpenStudioDrawer}
-                style={{ width: "100%", background: "none", border: "none", color: "var(--text3)", fontFamily: "inherit", fontSize: "12.5px", padding: "2px 0", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px" }}
-              >
-                自分から空き枠を出す
-              </button>
-            </>
+            role === "host" && (
+              <Panel>
+                <div style={{ fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text3)", fontWeight: 600, marginBottom: "11px" }}>
+                  スタジオを決めて、空き枠を共有！
+                </div>
+                <PrimaryButton onClick={onOpenStudioDrawer}>スタジオ候補をだす</PrimaryButton>
+              </Panel>
+            )
           )}
-        </Panel>
+        </>
       )}
     </>
   );
