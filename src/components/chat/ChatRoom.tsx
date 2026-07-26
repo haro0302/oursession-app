@@ -122,7 +122,12 @@ export default function ChatRoom({
           });
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          // eslint-disable-next-line no-console
+          console.error("chat realtime subscription failed", status, err);
+        }
+      });
     return () => { supabase.removeChannel(channel); };
   }, [answerId, role]); // eslint-disable-line react-hooks/exhaustive-deps
 
