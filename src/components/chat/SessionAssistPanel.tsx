@@ -1,10 +1,24 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { HelpCircle, X } from "lucide-react";
 import { ASSIST_DECK_LENGTH, timeOverlap } from "@/lib/assistDeck";
 import StudioProposalCard from "./StudioProposalCard";
 import type { AssistAnswerValue, StudioProposal } from "@/types/database";
+
+const INFO_CONTENT = {
+  deck: {
+    title: "セッションアシスト",
+    body: "セッションに向けての質問が合計6問！\nそれぞれが回答したタイミングでチャット欄に表示されます。",
+  },
+  studio: {
+    title: "スタジオ候補を出す",
+    body: "スタジオ日時の提案時にお使いください！\n・ホスト側（セッションカード主）の機能になります。\n・スタジオの予約機能ではございません\n・実際の空き枠はスタジオのサイトをご確認ください",
+  },
+} as const;
+
+type InfoKey = keyof typeof INFO_CONTENT;
 
 interface Props {
   assistAnswers: Record<number, Record<string, AssistAnswerValue>>;
@@ -35,6 +49,8 @@ export default function SessionAssistPanel({
   choosingId,
   bookingId,
 }: Props) {
+  const [openInfo, setOpenInfo] = useState<InfoKey | null>(null);
+
   const { done, opened, firstUnanswered } = useMemo(() => {
     let doneCount = 0;
     let openedCount = 0;
@@ -78,7 +94,7 @@ export default function SessionAssistPanel({
   return (
     <>
       <Panel>
-        <PanelHeader title="6枚のお題で自己紹介" done={done} />
+        <PanelHeader title="6枚のお題で自己紹介" done={done} onInfo={() => setOpenInfo("deck")} />
         {deckNote && (
           <div style={{ fontSize: "12.5px", color: "var(--text2)", lineHeight: 1.75, marginBottom: "14px", whiteSpace: "pre-line" }}>
             {deckNote}
@@ -139,13 +155,24 @@ export default function SessionAssistPanel({
         />
       ) : (
         <Panel>
-          <div style={{ fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text3)", fontWeight: 600, marginBottom: "11px" }}>
-            スタジオを決めて、空き枠を共有！
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "11px" }}>
+            <div style={{ fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text3)", fontWeight: 600 }}>
+              スタジオを決めて、空き枠を共有！
+            </div>
+            <InfoButton onClick={() => setOpenInfo("studio")} />
           </div>
           <PrimaryButton onClick={onOpenStudioDrawer} disabled={role !== "host"}>
             スタジオ候補をだす
           </PrimaryButton>
         </Panel>
+      )}
+
+      {openInfo && (
+        <InfoModal
+          title={INFO_CONTENT[openInfo].title}
+          body={INFO_CONTENT[openInfo].body}
+          onClose={() => setOpenInfo(null)}
+        />
       )}
     </>
   );
@@ -169,25 +196,87 @@ function Panel({ children }: { children: ReactNode }) {
   );
 }
 
-function PanelHeader({ title, done }: { title: string; done: number }) {
+function PanelHeader({ title, done, onInfo }: { title: string; done: number; onInfo: () => void }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "12px" }}>
+    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "12px", gap: "8px" }}>
       <div style={{ fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text3)", fontWeight: 600 }}>
         {title}
       </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: "5px" }}>
-        <span
-          style={{
-            fontSize: "22px", fontWeight: 700,
-            background: "linear-gradient(135deg, var(--red), var(--red2))",
-            WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent",
-          }}
-        >
-          {done}
-        </span>
-        <span style={{ fontSize: "11px", color: "var(--text3)" }}>/ {ASSIST_DECK_LENGTH}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: "5px" }}>
+          <span
+            style={{
+              fontSize: "22px", fontWeight: 700,
+              background: "linear-gradient(135deg, var(--red), var(--red2))",
+              WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent",
+            }}
+          >
+            {done}
+          </span>
+          <span style={{ fontSize: "11px", color: "var(--text3)" }}>/ {ASSIST_DECK_LENGTH}</span>
+        </div>
+        <InfoButton onClick={onInfo} />
       </div>
     </div>
+  );
+}
+
+function InfoButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="この機能について"
+      style={{
+        width: "26px", height: "26px", flexShrink: 0,
+        borderRadius: "50%", border: "1px solid var(--border2)", background: "var(--card2)",
+        display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0,
+      }}
+    >
+      <HelpCircle size={15} color="var(--text3)" />
+    </button>
+  );
+}
+
+function InfoModal({ title, body, onClose }: { title: string; body: string; onClose: () => void }) {
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed", inset: 0, zIndex: 90,
+          background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)",
+        }}
+      />
+      <div
+        style={{
+          position: "fixed", left: "20px", right: "20px", top: "50%", transform: "translateY(-50%)", zIndex: 95,
+          background: "rgba(24,24,30,0.97)",
+          backdropFilter: "blur(28px) saturate(1.4)", WebkitBackdropFilter: "blur(28px) saturate(1.4)",
+          border: "1px solid var(--border2)", borderRadius: "20px",
+          padding: "20px 20px 18px", maxWidth: "360px", margin: "0 auto",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", marginBottom: "10px" }}>
+          <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)" }}>{title}</div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="閉じる"
+            style={{
+              width: "26px", height: "26px", flexShrink: 0, borderRadius: "50%",
+              background: "var(--card2)", border: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0,
+            }}
+          >
+            <X size={13} color="var(--text2)" />
+          </button>
+        </div>
+        <div style={{ fontSize: "13px", color: "var(--text2)", lineHeight: 1.8, whiteSpace: "pre-line" }}>
+          {body}
+        </div>
+      </div>
+    </>
   );
 }
 
