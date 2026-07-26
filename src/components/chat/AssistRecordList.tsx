@@ -1,5 +1,6 @@
 "use client";
 
+import Avatar from "@/components/ui/Avatar";
 import { ASSIST_DECK, ASSIST_DECK_LENGTH } from "@/lib/assistDeck";
 import type { AssistAnswerValue, AssistProfileValue } from "@/types/database";
 
@@ -8,6 +9,8 @@ interface Props {
   currentUserId: string;
   partnerId: string;
   partnerNickname: string;
+  myAvatarUrl: string | null;
+  partnerAvatarUrl: string | null;
 }
 
 function formatValue(cardIndex: number, value: AssistAnswerValue): string {
@@ -20,7 +23,14 @@ function formatValue(cardIndex: number, value: AssistAnswerValue): string {
   return value as string;
 }
 
-export default function AssistRecordList({ assistAnswers, currentUserId, partnerId, partnerNickname }: Props) {
+export default function AssistRecordList({
+  assistAnswers,
+  currentUserId,
+  partnerId,
+  partnerNickname,
+  myAvatarUrl,
+  partnerAvatarUrl,
+}: Props) {
   const rows = [];
   for (let i = 0; i < ASSIST_DECK_LENGTH; i++) {
     const mine = assistAnswers[i]?.[currentUserId];
@@ -50,16 +60,14 @@ export default function AssistRecordList({ assistAnswers, currentUserId, partner
         </div>
 
         <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "8px" }}>
-          <div style={{ fontSize: "10.5px", color: "var(--text3)", flex: "0 0 46px", paddingTop: "4px", letterSpacing: "0.03em" }}>あなた</div>
+          <RowLabel avatarUrl={myAvatarUrl} label="あなた" />
           <div style={{ fontSize: "13.5px", lineHeight: 1.6, background: "var(--red-bg)", borderRadius: "11px", padding: "8px 11px", flex: 1, color: "var(--text)" }}>
             {formatValue(i, mine)}
           </div>
         </div>
 
         <div style={{ display: "flex", gap: "9px", alignItems: "flex-start" }}>
-          <div style={{ fontSize: "10.5px", color: "var(--text3)", flex: "0 0 46px", paddingTop: "4px", letterSpacing: "0.03em" }}>
-            {partnerNickname}
-          </div>
+          <RowLabel avatarUrl={partnerAvatarUrl} label={partnerNickname} />
           {partner !== undefined ? (
             <div
               style={{
@@ -100,6 +108,21 @@ export default function AssistRecordList({ assistAnswers, currentUserId, partner
         @keyframes assistShimmer { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
       `}</style>
       {rows}
+    </div>
+  );
+}
+
+function RowLabel({ avatarUrl, label }: { avatarUrl: string | null; label: string }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", flex: "0 0 46px" }}>
+      <Avatar src={avatarUrl} alt={label} size="sm" />
+      <div style={{
+        fontSize: "9.5px", color: "var(--text3)", letterSpacing: "0.02em",
+        textAlign: "center", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis",
+        whiteSpace: "nowrap", width: "100%",
+      }}>
+        {label}
+      </div>
     </div>
   );
 }

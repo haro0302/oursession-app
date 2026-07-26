@@ -28,6 +28,8 @@ interface Props {
   sessionAuthorNickname: string;
   partnerNickname: string;
   partnerId: string;
+  partnerAvatarUrl: string | null;
+  myAvatarUrl: string | null;
   initialMessages: MessageWithSender[];
   currentUserId: string;
   role: "host" | "guest" | "pending";
@@ -43,6 +45,8 @@ export default function ChatRoom({
   sessionAuthorNickname,
   partnerNickname,
   partnerId,
+  partnerAvatarUrl,
+  myAvatarUrl,
   initialMessages,
   currentUserId,
   role,
@@ -126,7 +130,6 @@ export default function ChatRoom({
       )
       .subscribe((status, err) => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          // eslint-disable-next-line no-console
           console.error("chat realtime subscription failed", status, err);
         }
       });
@@ -404,6 +407,8 @@ export default function ChatRoom({
               currentUserId={currentUserId}
               partnerId={partnerId}
               partnerNickname={partnerNickname}
+              myAvatarUrl={myAvatarUrl}
+              partnerAvatarUrl={partnerAvatarUrl}
             />
             <SessionAssistPanel
               assistAnswers={assistAnswers}

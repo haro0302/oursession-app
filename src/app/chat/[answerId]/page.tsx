@@ -81,6 +81,7 @@ export default async function ChatPage({
 
   // このルームの相手(ホストからは送信者、送信者からはホスト)
   const partnerProfile = isAuthor ? senderProfile : authorProfile;
+  const myProfile = isAuthor ? authorProfile : senderProfile;
 
   // メッセージ取得（RLSでこのルームの当事者のみ）
   let messages: MessageWithSender[] = [];
@@ -154,6 +155,8 @@ export default async function ChatPage({
       sessionAuthorNickname={authorNickname}
       partnerNickname={partnerProfile?.nickname ?? ""}
       partnerId={partnerProfile?.id ?? ""}
+      partnerAvatarUrl={partnerProfile?.avatar_url ?? null}
+      myAvatarUrl={myProfile?.avatar_url ?? null}
       initialMessages={messages}
       currentUserId={currentUserId}
       role={role}
