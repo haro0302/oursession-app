@@ -54,7 +54,7 @@ export default function SessionAssistPanel({
   let deckNote: string;
   if (done === 0) {
     deckLabel = "セッションアシストを始める";
-    deckNote = "6枚のお題で自己紹介！";
+    deckNote = "";
   } else if (done < ASSIST_DECK_LENGTH) {
     deckLabel = "つづきに答える";
     deckNote = `あと${ASSIST_DECK_LENGTH - done}枚。相手を待たずに進められます。\nひらいたカード ${opened} / ${ASSIST_DECK_LENGTH}`;
@@ -78,10 +78,12 @@ export default function SessionAssistPanel({
   return (
     <>
       <Panel>
-        <PanelHeader title="セッションアシスト" done={done} />
-        <div style={{ fontSize: "12.5px", color: "var(--text2)", lineHeight: 1.75, marginBottom: "14px", whiteSpace: "pre-line" }}>
-          {deckNote}
-        </div>
+        <PanelHeader title="6枚のお題で自己紹介" done={done} />
+        {deckNote && (
+          <div style={{ fontSize: "12.5px", color: "var(--text2)", lineHeight: 1.75, marginBottom: "14px", whiteSpace: "pre-line" }}>
+            {deckNote}
+          </div>
+        )}
         <PrimaryButton onClick={() => onOpenDeck(firstUnanswered === -1 ? 0 : firstUnanswered)}>{deckLabel}</PrimaryButton>
 
         {deckFullyOpened && (
