@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useBlockStore } from "@/store/blockStore";
 import { useNotificationStore } from "@/store/notificationStore";
-import { fetchOtherPartyMessages } from "@/lib/chatActivity";
+import { fetchRoomMessageEvents } from "@/lib/chatActivity";
 import { getChatReadAt } from "@/lib/chatReads";
 import Avatar from "@/components/ui/Avatar";
 import type { MsgRow } from "./page";
@@ -91,14 +91,18 @@ export default function MessagesClient({ rows, currentUserId }: Props) {
     let cancelled = false;
 
     async function load() {
-      const events = await fetchOtherPartyMessages(currentUserId, roomIds);
+      const events = await fetchRoomMessageEvents(roomIds);
       if (cancelled) return;
       const stats = new Map<string, SessionStats>();
       for (const e of events) {
         const entry = stats.get(e.roomId) ?? { latestAt: e.createdAt, unreadCount: 0 };
+        // 並び替えの基準時刻は送信者を問わない最終活動時刻(自分の送信分も含む)
         if (e.createdAt > entry.latestAt) entry.latestAt = e.createdAt;
-        const readAt = getChatReadAt(e.roomId);
-        if (!readAt || new Date(e.createdAt) > readAt) entry.unreadCount++;
+        // 未読バッジは相手から届いた分だけをカウントする
+        if (e.senderId !== currentUserId) {
+          const readAt = getChatReadAt(e.roomId);
+          if (!readAt || new Date(e.createdAt) > readAt) entry.unreadCount++;
+        }
         stats.set(e.roomId, entry);
       }
       setMessageStats(stats);
