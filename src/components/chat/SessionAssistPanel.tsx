@@ -107,49 +107,45 @@ export default function SessionAssistPanel({
         )}
       </Panel>
 
-      {/* ── カード2: スタジオ枠提案(常時表示。提案が無い間、ゲストには何も出さない) ── */}
-      {(role === "host" || studioProposals.length > 0) && (
-        <>
-          {historicalProposals.map((p) => (
-            <StudioProposalCard
-              key={p.id}
-              proposal={p}
-              currentUserId={currentUserId}
-              partnerNickname={partnerNickname}
-              role={role}
-              interactive={false}
-              choosing={false}
-              booking={false}
-              onChoose={() => {}}
-              onMarkBooked={() => {}}
-              onRedo={() => {}}
-            />
-          ))}
+      {/* ── カード2: スタジオ枠提案(常時表示。まだ提案が無い間はゲストはボタンだけ操作不可) ── */}
+      {historicalProposals.map((p) => (
+        <StudioProposalCard
+          key={p.id}
+          proposal={p}
+          currentUserId={currentUserId}
+          partnerNickname={partnerNickname}
+          role={role}
+          interactive={false}
+          choosing={false}
+          booking={false}
+          onChoose={() => {}}
+          onMarkBooked={() => {}}
+          onRedo={() => {}}
+        />
+      ))}
 
-          {activeProposal ? (
-            <StudioProposalCard
-              proposal={activeProposal}
-              currentUserId={currentUserId}
-              partnerNickname={partnerNickname}
-              role={role}
-              interactive
-              choosing={choosingId === activeProposal.id}
-              booking={bookingId === activeProposal.id}
-              onChoose={(index) => onChooseSlot(activeProposal.id, index)}
-              onMarkBooked={() => onMarkBooked(activeProposal.id)}
-              onRedo={onOpenStudioDrawer}
-            />
-          ) : (
-            role === "host" && (
-              <Panel>
-                <div style={{ fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text3)", fontWeight: 600, marginBottom: "11px" }}>
-                  スタジオを決めて、空き枠を共有！
-                </div>
-                <PrimaryButton onClick={onOpenStudioDrawer}>スタジオ候補をだす</PrimaryButton>
-              </Panel>
-            )
-          )}
-        </>
+      {activeProposal ? (
+        <StudioProposalCard
+          proposal={activeProposal}
+          currentUserId={currentUserId}
+          partnerNickname={partnerNickname}
+          role={role}
+          interactive
+          choosing={choosingId === activeProposal.id}
+          booking={bookingId === activeProposal.id}
+          onChoose={(index) => onChooseSlot(activeProposal.id, index)}
+          onMarkBooked={() => onMarkBooked(activeProposal.id)}
+          onRedo={onOpenStudioDrawer}
+        />
+      ) : (
+        <Panel>
+          <div style={{ fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text3)", fontWeight: 600, marginBottom: "11px" }}>
+            スタジオを決めて、空き枠を共有！
+          </div>
+          <PrimaryButton onClick={onOpenStudioDrawer} disabled={role !== "host"}>
+            スタジオ候補をだす
+          </PrimaryButton>
+        </Panel>
       )}
     </>
   );
@@ -204,15 +200,30 @@ function SummaryLine({ label, children }: { label: string; children: ReactNode }
   );
 }
 
-function PrimaryButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+function PrimaryButton({
+  children,
+  onClick,
+  disabled,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
       style={{
-        width: "100%", border: "1px solid var(--red)", cursor: "pointer", fontFamily: "inherit",
-        background: "var(--red)", color: "white", fontSize: "14.5px", fontWeight: 700,
-        borderRadius: "14px", padding: "13px", boxShadow: "0 4px 14px rgba(232,74,95,0.35)",
+        width: "100%",
+        border: disabled ? "1px solid var(--border)" : "1px solid var(--red)",
+        cursor: disabled ? "not-allowed" : "pointer",
+        fontFamily: "inherit",
+        background: disabled ? "var(--card2)" : "var(--red)",
+        color: disabled ? "var(--text3)" : "white",
+        fontSize: "14.5px", fontWeight: 700,
+        borderRadius: "14px", padding: "13px",
+        boxShadow: disabled ? "none" : "0 4px 14px rgba(232,74,95,0.35)",
       }}
     >
       {children}
