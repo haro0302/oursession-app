@@ -229,11 +229,11 @@ function InfoButton({ onClick }: { onClick: () => void }) {
       aria-label="この機能について"
       style={{
         width: "26px", height: "26px", flexShrink: 0,
-        borderRadius: "50%", border: "1px solid var(--border2)", background: "var(--card2)",
+        background: "transparent", border: "none",
         display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0,
       }}
     >
-      <HelpCircle size={15} color="var(--text3)" />
+      <HelpCircle size={19} color="var(--text3)" />
     </button>
   );
 }
