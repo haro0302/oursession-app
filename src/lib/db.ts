@@ -186,6 +186,16 @@ export async function markStudioBooked(proposalId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+type ProfilePrivateInsert = Database["public"]["Tables"]["profile_private"]["Insert"];
+
+export async function insertProfilePrivate(data: ProfilePrivateInsert): Promise<void> {
+  const { createClient } = await import("@/lib/supabase");
+  const supabase = createClient();
+  await supabase
+    .from("profile_private")
+    .upsert(data as unknown as never, { onConflict: "user_id", ignoreDuplicates: true });
+}
+
 export async function insertBlock(blockerId: string, blockedId: string): Promise<void> {
   const { createClient } = await import("@/lib/supabase");
   const supabase = createClient();

@@ -31,6 +31,7 @@ export default function PrivacyPolicyPage() {
           <ul className="legal-ul">
             <li><span className="legal-strong">アカウント情報：</span>メールアドレス（メール認証・Googleログインを利用する場合）、Googleアカウントの基本プロフィール情報（Googleログインを利用する場合のみ）</li>
             <li><span className="legal-strong">プロフィール情報：</span>ニックネーム、エリア、練習中フラグ、楽器・ジャンル・好きなアーティスト／好きな曲、自己紹介、アバター画像、SNSリンク</li>
+            <li><span className="legal-strong">年齢確認情報：</span>生年月日（18歳以上であることの確認にのみ使用し、プロフィール等で第三者に公開することはありません）</li>
             <li><span className="legal-strong">投稿コンテンツ：</span>投稿・アンサーとして送信されるMP3音源ファイル、タイトル・本文・タグ</li>
             <li><span className="legal-strong">コミュニケーション情報：</span>承認済みの相手とのチャットメッセージ（第三者には非公開です）</li>
             <li><span className="legal-strong">安全機能に関する情報：</span>通報・ブロックの記録</li>
@@ -41,7 +42,7 @@ export default function PrivacyPolicyPage() {
         <div className="legal-section">
           <h2 className="legal-h2">2. 利用目的</h2>
           <ul className="legal-ul">
-            <li>ユーザー認証・本人確認、アカウント管理</li>
+            <li>ユーザー認証、アカウント管理、および18歳以上であることの確認（年齢確認）</li>
             <li>セッション相手とのマッチング機能の提供（音源投稿・アンサー・承認・メッセージ）</li>
             <li>通知の送信（新着アンサー、承認、メッセージ等）</li>
             <li>通報・ブロックへの対応、不正利用の防止・調査</li>

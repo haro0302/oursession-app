@@ -355,6 +355,28 @@ export interface Database {
           }
         ];
       };
+      profile_private: {
+        Row: {
+          user_id: string;
+          birth_date: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          birth_date: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [
+          {
+            foreignKeyName: "profile_private_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       saves: {
         Row: {
           user_id: string;

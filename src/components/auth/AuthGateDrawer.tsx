@@ -2,15 +2,30 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, Mail } from "lucide-react";
+import Link from "next/link";
+import { UserPlus, Mail, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { registerAuthGateOpener } from "@/lib/auth-gate";
 import { showToast } from "@/components/ui/Toast";
+import { insertProfilePrivate } from "@/lib/db";
 import type { Database } from "@/types/database";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
-type ViewState = "options" | "email" | "code";
+type ViewState = "age" | "options" | "email" | "code";
+
+const MIN_AGE = 18;
+
+function calcAge(birthDateStr: string): number {
+  const today = new Date();
+  const birth = new Date(birthDateStr);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 interface AuthGateDrawerProps {
   open: boolean;
@@ -19,7 +34,10 @@ interface AuthGateDrawerProps {
 
 export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
   const router = useRouter();
-  const [view, setView] = useState<ViewState>("options");
+  const [view, setView] = useState<ViewState>("age");
+  const [birthDate, setBirthDate] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [ageError, setAgeError] = useState(false);
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -28,12 +46,16 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
   const [verifying, setVerifying] = useState(false);
   const [codeError, setCodeError] = useState(false);
   const resendTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     if (!open) {
       clearTimeout(resendTimer.current);
       const t = setTimeout(() => {
-        setView("options");
+        setView("age");
+        setBirthDate("");
+        setConsent(false);
+        setAgeError(false);
         setEmail("");
         setSending(false);
         setHasError(false);
@@ -46,11 +68,23 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
     }
   }, [open]);
 
+  function handleAgeContinue() {
+    if (!birthDate || !consent) return;
+    if (calcAge(birthDate) < MIN_AGE) {
+      setAgeError(true);
+      return;
+    }
+    setAgeError(false);
+    setView("options");
+  }
+
   async function handleGoogle() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?birth_date=${encodeURIComponent(birthDate)}`,
+      },
     });
     if (error) {
       showToast("Google ログインに失敗しました。もう一度お試しください。");
@@ -107,6 +141,8 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
       return;
     }
 
+    await insertProfilePrivate({ user_id: data.user.id, birth_date: birthDate });
+
     const { data: profileRaw } = await supabase
       .from("profiles")
       .select("onboarded_at")
@@ -132,16 +168,79 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
       <div className={`auth-drawer${open ? " open" : ""}`}>
         <div className="auth-handle" />
 
-        <div className="auth-hero">
-          <div className="auth-hero-icon">
-            <UserPlus size={24} color="var(--red2)" />
+        {view === "age" ? (
+          <div className="auth-hero">
+            <div className="auth-hero-icon">
+              <ShieldCheck size={24} color="var(--red2)" />
+            </div>
+            <div className="auth-hero-title">はじめる前に</div>
+            <div className="auth-hero-sub">
+              本サービスは対面でのセッションにつながるサービスです。<br />
+              ご利用には年齢確認と規約への同意をお願いしています。
+            </div>
           </div>
-          <div className="auth-hero-title">ログインしてはじめよう</div>
-          <div className="auth-hero-sub">
-            音源を聴いて、気になる人にアンサーを送ろう。<br />
-            仲間とスタジオに集まる第一歩はここから。
+        ) : (
+          <div className="auth-hero">
+            <div className="auth-hero-icon">
+              <UserPlus size={24} color="var(--red2)" />
+            </div>
+            <div className="auth-hero-title">ログインしてはじめよう</div>
+            <div className="auth-hero-sub">
+              音源を聴いて、気になる人にアンサーを送ろう。<br />
+              仲間とスタジオに集まる第一歩はここから。
+            </div>
           </div>
-        </div>
+        )}
+
+        {view === "age" && (
+          <div className="auth-email-form">
+            <div>
+              <div style={{ fontSize: "12px", color: "var(--text3)", fontWeight: 600, marginBottom: "6px" }}>
+                生年月日
+              </div>
+              <input
+                type="date"
+                className="auth-input"
+                max={todayStr}
+                value={birthDate}
+                onChange={(e) => { setBirthDate(e.target.value); setAgeError(false); }}
+              />
+              <div style={{ fontSize: "11px", color: "var(--text3)", lineHeight: 1.6, marginTop: "6px" }}>
+                生年月日は年齢確認にのみ使用し、プロフィールには表示されません。
+              </div>
+            </div>
+
+            <label className="age-consent-row">
+              <input
+                type="checkbox"
+                className="age-consent-checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+              />
+              <span className="age-consent-text">
+                <Link href="/terms" target="_blank" rel="noopener noreferrer">利用規約</Link>
+                および
+                <Link href="/privacy" target="_blank" rel="noopener noreferrer">プライバシーポリシー</Link>
+                に同意します
+              </span>
+            </label>
+
+            {ageError && (
+              <div className="auth-email-error">
+                本サービスは対面でのセッションを前提とするため、18歳以上の方のみご利用いただけます。
+              </div>
+            )}
+
+            <button
+              type="button"
+              className={`auth-btn${birthDate && consent ? " primary" : ""}`}
+              disabled={!birthDate || !consent}
+              onClick={handleAgeContinue}
+            >
+              次へ
+            </button>
+          </div>
+        )}
 
         {view === "options" && (
           <div className="auth-options">

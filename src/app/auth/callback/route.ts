@@ -7,8 +7,18 @@ type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 async function redirectAfterAuth(
   supabase: Awaited<ReturnType<typeof createServerSupabase>>,
   userId: string,
-  origin: string
+  origin: string,
+  birthDate: string | null
 ) {
+  if (birthDate) {
+    await supabase
+      .from("profile_private")
+      .upsert(
+        { user_id: userId, birth_date: birthDate } as unknown as never,
+        { onConflict: "user_id", ignoreDuplicates: true }
+      );
+  }
+
   const result = await supabase
     .from("profiles")
     .select("*")
@@ -28,6 +38,7 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type");
+  const birthDate = searchParams.get("birth_date");
 
   const supabase = await createServerSupabase();
 
@@ -35,7 +46,7 @@ export async function GET(request: Request) {
   if (code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error && data.user) {
-      return redirectAfterAuth(supabase, data.user.id, origin);
+      return redirectAfterAuth(supabase, data.user.id, origin, birthDate);
     }
   }
 
@@ -46,7 +57,7 @@ export async function GET(request: Request) {
       type: type as "email" | "recovery" | "invite" | "email_change",
     });
     if (!error && data.user) {
-      return redirectAfterAuth(supabase, data.user.id, origin);
+      return redirectAfterAuth(supabase, data.user.id, origin, birthDate);
     }
   }
 
