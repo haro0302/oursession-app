@@ -20,14 +20,14 @@ export const STUDIO_AREAS: Record<string, Record<string, StudioEntry[]>> = {
       { name: "島村楽器 梅田茶屋町店", note: "梅田駅", url: "https://www.shimamura.co.jp/shop/umeda" },
       { name: "島村楽器 グランフロント大阪店", note: "大阪駅", url: "https://www.shimamura.co.jp/shop/osaka-classic" },
     ],
-    心斎橋・なんば: [
+    "心斎橋・なんば": [
       { name: "BASS ON TOP 心斎橋店", note: "心斎橋駅", url: "https://www.bassontop.co.jp/band/shinsaibashi/" },
       { name: "BASS ON TOP 東心斎橋店", note: "心斎橋駅", url: "https://www.bassontop.co.jp/band/higashishinsaibashi/" },
       { name: "BASS ON TOP アメ村店", note: "心斎橋駅周辺", url: "https://www.bassontop.co.jp/band/amemura/" },
       { name: "BASS ON TOP なんば店", note: "難波駅", url: "https://www.bassontop.co.jp/band/namba/" },
       { name: "音楽スタジオ246 NAMBA", note: "なんば駅", url: "https://www.studio246.net/reserve/?si=09" },
     ],
-    天王寺・あべの: [
+    "天王寺・あべの": [
       { name: "BASS ON TOP 天王寺店", note: "JR天王寺駅", url: "https://www.bassontop.co.jp/band/tennoji/" },
       { name: "島村楽器 あべのand店", note: "天王寺駅", url: "https://www.shimamura.co.jp/shop/abeno" },
     ],
@@ -44,11 +44,11 @@ export const STUDIO_AREAS: Record<string, Record<string, StudioEntry[]>> = {
       { name: "BASS ON TOP 堺 深井駅前店", note: "深井駅", url: "https://www.bassontop.co.jp/band/fukai/" },
       { name: "島村楽器 イオンモール堺北花田店", note: "北花田駅", url: "https://www.shimamura.co.jp/shop/sakaikitahanada" },
     ],
-    門真・大日: [
+    "門真・大日": [
       { name: "島村楽器 ららぽーと門真店", note: "古川橋駅", url: "https://www.shimamura.co.jp/shop/l-kadoma" },
       { name: "島村楽器 イオンモール大日店", note: "大日駅", url: "https://www.shimamura.co.jp/shop/dainichi" },
     ],
-    万博・吹田: [
+    "万博・吹田": [
       { name: "島村楽器 ららぽーとEXPOCITY店", note: "万博記念公園駅", url: "https://www.shimamura.co.jp/shop/expocity" },
     ],
     枚方: [
