@@ -865,6 +865,28 @@ body {
 .age-consent-text { font-size: 12.5px; color: var(--text2); line-height: 1.6; }
 .age-consent-text a { color: var(--red2); text-decoration: underline; }
 
+.age-date-row { display: flex; gap: 8px; }
+.age-date-wrap {
+  flex: 1; min-width: 0;
+  background: var(--card); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  border: 1px solid var(--border); border-radius: 14px;
+  padding: 0; display: flex; align-items: center; position: relative;
+}
+.age-date-select {
+  width: 100%; background: transparent; border: none; outline: none;
+  color: var(--text); font-family: inherit; text-align: center;
+  font-size: 14px; padding: 12px 22px 12px 10px;
+  -webkit-appearance: none; appearance: none; cursor: pointer;
+}
+.age-date-select option { background: #1a1a20; color: var(--text); }
+.age-date-chevron {
+  position: absolute; right: 8px;
+  width: 7px; height: 7px;
+  border-right: 1.5px solid var(--text2); border-bottom: 1.5px solid var(--text2);
+  transform: rotate(45deg);
+  pointer-events: none; flex-shrink: 0;
+}
+
 /* ============ LEGAL PAGES (privacy / terms) ============ */
 .legal-page { min-height: 100dvh; background: var(--bg); }
 .legal-header {

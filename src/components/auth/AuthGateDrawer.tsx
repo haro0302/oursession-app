@@ -15,6 +15,13 @@ type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type ViewState = "age" | "options" | "email" | "code";
 
 const MIN_AGE = 18;
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 101 }, (_, i) => CURRENT_YEAR - i);
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
 
 function calcAge(birthDateStr: string): number {
   const today = new Date();
@@ -35,7 +42,9 @@ interface AuthGateDrawerProps {
 export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
   const router = useRouter();
   const [view, setView] = useState<ViewState>("age");
-  const [birthDate, setBirthDate] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthDay, setBirthDay] = useState("");
   const [consent, setConsent] = useState(false);
   const [ageError, setAgeError] = useState(false);
   const [email, setEmail] = useState("");
@@ -46,14 +55,19 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
   const [verifying, setVerifying] = useState(false);
   const [codeError, setCodeError] = useState(false);
   const resendTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const birthDate = birthYear && birthMonth && birthDay ? `${birthYear}-${birthMonth}-${birthDay}` : "";
+  const maxDay = birthYear && birthMonth ? daysInMonth(Number(birthYear), Number(birthMonth)) : 31;
+  const dayOptions = Array.from({ length: maxDay }, (_, i) => i + 1);
 
   useEffect(() => {
     if (!open) {
       clearTimeout(resendTimer.current);
       const t = setTimeout(() => {
         setView("age");
-        setBirthDate("");
+        setBirthYear("");
+        setBirthMonth("");
+        setBirthDay("");
         setConsent(false);
         setAgeError(false);
         setEmail("");
@@ -175,8 +189,7 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
             </div>
             <div className="auth-hero-title">はじめる前に</div>
             <div className="auth-hero-sub">
-              本サービスは対面でのセッションにつながるサービスです。<br />
-              ご利用には年齢確認と規約への同意をお願いしています。
+              本サービスは対面でのセッションにつながるサービスです。ご利用には年齢確認と規約への同意をお願いしています。
             </div>
           </div>
         ) : (
@@ -198,13 +211,65 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
               <div style={{ fontSize: "12px", color: "var(--text3)", fontWeight: 600, marginBottom: "6px" }}>
                 生年月日
               </div>
-              <input
-                type="date"
-                className="auth-input"
-                max={todayStr}
-                value={birthDate}
-                onChange={(e) => { setBirthDate(e.target.value); setAgeError(false); }}
-              />
+              <div className="age-date-row">
+                <div className="age-date-wrap">
+                  <select
+                    className="age-date-select"
+                    value={birthYear}
+                    onChange={(e) => {
+                      const y = e.target.value;
+                      setBirthYear(y);
+                      setAgeError(false);
+                      if (y && birthMonth && birthDay) {
+                        const max = daysInMonth(Number(y), Number(birthMonth));
+                        if (Number(birthDay) > max) setBirthDay("");
+                      }
+                    }}
+                  >
+                    <option value="" disabled>年</option>
+                    {YEAR_OPTIONS.map((y) => (
+                      <option key={y} value={String(y)}>{y}</option>
+                    ))}
+                  </select>
+                  <span className="age-date-chevron" />
+                </div>
+                <div className="age-date-wrap">
+                  <select
+                    className="age-date-select"
+                    value={birthMonth}
+                    onChange={(e) => {
+                      const m = e.target.value;
+                      setBirthMonth(m);
+                      setAgeError(false);
+                      if (birthYear && m && birthDay) {
+                        const max = daysInMonth(Number(birthYear), Number(m));
+                        if (Number(birthDay) > max) setBirthDay("");
+                      }
+                    }}
+                  >
+                    <option value="" disabled>月</option>
+                    {MONTH_OPTIONS.map((m) => {
+                      const v = String(m).padStart(2, "0");
+                      return <option key={v} value={v}>{m}</option>;
+                    })}
+                  </select>
+                  <span className="age-date-chevron" />
+                </div>
+                <div className="age-date-wrap">
+                  <select
+                    className="age-date-select"
+                    value={birthDay}
+                    onChange={(e) => { setBirthDay(e.target.value); setAgeError(false); }}
+                  >
+                    <option value="" disabled>日</option>
+                    {dayOptions.map((d) => {
+                      const v = String(d).padStart(2, "0");
+                      return <option key={v} value={v}>{d}</option>;
+                    })}
+                  </select>
+                  <span className="age-date-chevron" />
+                </div>
+              </div>
               <div style={{ fontSize: "11px", color: "var(--text3)", lineHeight: 1.6, marginTop: "6px" }}>
                 生年月日は年齢確認にのみ使用し、プロフィールには表示されません。
               </div>
@@ -233,8 +298,8 @@ export default function AuthGateDrawer({ open, onClose }: AuthGateDrawerProps) {
 
             <button
               type="button"
-              className={`auth-btn${birthDate && consent ? " primary" : ""}`}
-              disabled={!birthDate || !consent}
+              className={`auth-btn${birthYear && birthMonth && birthDay && consent ? " primary" : ""}`}
+              disabled={!birthYear || !birthMonth || !birthDay || !consent}
               onClick={handleAgeContinue}
             >
               次へ
