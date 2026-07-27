@@ -167,7 +167,7 @@ export default function StudioProposalDrawer({ open, onClose, onSubmit }: Props)
               <Label>都道府県</Label>
               <ChipRow>
                 {STUDIO_PREFECTURES.map((p) => (
-                  <Chip key={p} label={p} active={pref === p} onClick={() => { setPref(p); setArea(null); setStudio(null); }} />
+                  <Chip key={p} label={p} active={pref === p} onClick={() => { setPref(p); setArea(null); setStudio(null); setUrl(""); }} />
                 ))}
               </ChipRow>
 
@@ -176,7 +176,7 @@ export default function StudioProposalDrawer({ open, onClose, onSubmit }: Props)
                   <Label>エリア</Label>
                   <ChipRow>
                     {Object.keys(STUDIO_AREAS[pref]).map((a) => (
-                      <Chip key={a} label={a} small active={area === a} onClick={() => { setArea(a); setStudio(null); }} />
+                      <Chip key={a} label={a} small active={area === a} onClick={() => { setArea(a); setStudio(null); setUrl(""); }} />
                     ))}
                   </ChipRow>
                 </>
@@ -187,9 +187,20 @@ export default function StudioProposalDrawer({ open, onClose, onSubmit }: Props)
                   <Label>スタジオ</Label>
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "18px" }}>
                     {STUDIO_AREAS[pref][area].map((s) => (
-                      <StudioRow key={s.name} name={s.name} sub={s.note} active={studio === s.name} onClick={() => setStudio(s.name)} />
+                      <StudioRow
+                        key={s.name}
+                        name={s.name}
+                        sub={s.note}
+                        active={studio === s.name}
+                        onClick={() => { setStudio(s.name); setUrl(s.url); }}
+                      />
                     ))}
-                    <StudioRow name="その他(自分で入力)" sub="リストにないスタジオ" active={studio === "__custom"} onClick={() => setStudio("__custom")} />
+                    <StudioRow
+                      name="その他(自分で入力)"
+                      sub="リストにないスタジオ"
+                      active={studio === "__custom"}
+                      onClick={() => { setStudio("__custom"); setUrl(""); }}
+                    />
                   </div>
                   {studio === "__custom" && (
                     <input
