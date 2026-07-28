@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useMemo } from "react";
 import { Send, User } from "lucide-react";
 import AudioUploader from "@/components/audio/AudioUploader";
 import { insertAnswer } from "@/lib/db";
@@ -16,7 +16,11 @@ interface Props {
 }
 
 export default function AnswerDrawer({ open, onClose, session, currentUserId, onSuccess }: Props) {
-  const answerId = useRef(crypto.randomUUID()).current;
+  // アンサー先セッションが変わるたびに新しい id を発行する。
+  // ドロワーはスライド閉じアニメーションのため閉じた後もマウントされ続けるので、
+  // useRef で固定すると前のアンサー送信で使った id が使い回され、
+  // 別カードへの送信が主キー衝突で失敗してしまう。
+  const answerId = useMemo(() => crypto.randomUUID(), [session.id]);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [waveformPeaks, setWaveformPeaks] = useState<number[] | null>(null);
   const [message, setMessage] = useState("");
@@ -193,6 +197,7 @@ export default function AnswerDrawer({ open, onClose, session, currentUserId, on
               </span>
             </div>
             <AudioUploader
+              key={session.id}
               userId={currentUserId}
               sessionId={answerId}
               onUploaded={(url, peaks) => { setAudioUrl(url); setWaveformPeaks(peaks ?? null); }}
