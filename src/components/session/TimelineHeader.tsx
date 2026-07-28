@@ -33,11 +33,12 @@ interface Props {
   currentUserId?: string | null;
   filterState?: Record<FilterKey, string[]>;
   onOpenFilter?: (key: FilterKey) => void;
+  query?: string;
+  onQueryChange?: (query: string) => void;
 }
 
-export default function TimelineHeader({ currentUserId: _currentUserId, filterState, onOpenFilter }: Props) {
+export default function TimelineHeader({ currentUserId: _currentUserId, filterState, onOpenFilter, query = "", onQueryChange }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const { openNotifications } = useNotifications();
 
@@ -153,7 +154,7 @@ export default function TimelineHeader({ currentUserId: _currentUserId, filterSt
             type="text"
             placeholder="アーティスト名・曲名で検索"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => onQueryChange?.(e.target.value)}
             style={{
               flex: 1,
               background: "transparent",
