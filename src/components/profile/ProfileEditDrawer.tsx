@@ -10,6 +10,7 @@ import { useProfileStore } from "@/store/profileStore";
 import { showToast } from "@/components/ui/Toast";
 import { PREFECTURES } from "@/lib/constants/prefectures";
 import FilterSheet from "@/components/session/FilterSheet";
+import TagAutocompleteInput from "@/components/profile/TagAutocompleteInput";
 import type { Profile } from "@/types/database";
 
 interface Props {
@@ -46,24 +47,12 @@ export default function ProfileEditDrawer({ profile }: Props) {
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [filterSheetKey, setFilterSheetKey] = useState<"instrument" | "genre">("instrument");
 
-  // タグ入力
-  const [artistInputOpen, setArtistInputOpen] = useState(false);
-  const [artistInput, setArtistInput] = useState("");
-  const artistInputRef = useRef<HTMLInputElement>(null);
-  const [trackInputOpen, setTrackInputOpen] = useState(false);
-  const [trackInput, setTrackInput] = useState("");
-  const trackInputRef = useRef<HTMLInputElement>(null);
+  // ドロワーを開くたびにタグ入力コンポーネントを新規マウントし直すためのキー
+  const [editSession, setEditSession] = useState(0);
+
   const bioTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
-
-  useEffect(() => {
-    if (artistInputOpen) artistInputRef.current?.focus();
-  }, [artistInputOpen]);
-
-  useEffect(() => {
-    if (trackInputOpen) trackInputRef.current?.focus();
-  }, [trackInputOpen]);
 
   function resizeBioTextarea() {
     const el = bioTextareaRef.current;
@@ -90,11 +79,8 @@ export default function ProfileEditDrawer({ profile }: Props) {
     setSnsX(sns.x ?? "");
     setSnsIg(sns.instagram ?? "");
     setSnsCloud(sns.soundcloud ?? "");
-    setArtistInputOpen(false);
-    setArtistInput("");
-    setTrackInputOpen(false);
-    setTrackInput("");
     setFilterSheetOpen(false);
+    setEditSession((s) => s + 1);
     setOpen(true);
   }
 
@@ -146,30 +132,6 @@ export default function ProfileEditDrawer({ profile }: Props) {
   function openFilterSheet(key: "instrument" | "genre") {
     setFilterSheetKey(key);
     setFilterSheetOpen(true);
-  }
-
-  function addArtist(val: string) {
-    const v = val.trim();
-    if (!v || artists.includes(v) || v.length > 30) return;
-    setArtists((prev) => [...prev, v]);
-  }
-
-  function addTrack(val: string) {
-    const v = val.trim();
-    if (!v || tracks.includes(v) || v.length > 30) return;
-    setTracks((prev) => [...prev, v]);
-  }
-
-  function commitArtistInput() {
-    addArtist(artistInput);
-    setArtistInput("");
-    setArtistInputOpen(false);
-  }
-
-  function commitTrackInput() {
-    addTrack(trackInput);
-    setTrackInput("");
-    setTrackInputOpen(false);
   }
 
   return (
@@ -341,102 +303,28 @@ export default function ProfileEditDrawer({ profile }: Props) {
           </div>
 
           {/* 好きなアーティスト */}
-          <div className="pe-section">
-            <div className="pe-section-label">
-              好きなアーティスト
-              <span className="pe-section-hint">任意・最大{MAX_TAGS}件</span>
-            </div>
-            <div className="pe-tag-grid">
-              {artists.map((a) => (
-                <span key={a} className="pe-tag">
-                  {a}
-                  <span className="pe-tag-x" onClick={() => setArtists((p) => p.filter((v) => v !== a))}>
-                    <X size={10} color="var(--red2)" />
-                  </span>
-                </span>
-              ))}
-              {!artistInputOpen && (
-                <button
-                  type="button"
-                  className="pe-tag-add"
-                  onClick={() => setArtistInputOpen(true)}
-                  disabled={artists.length >= MAX_TAGS}
-                >
-                  <Plus size={11} />
-                  追加
-                </button>
-              )}
-            </div>
-            {artistInputOpen && (
-              <div className="pe-suggest-wrap">
-                <div className="pe-suggest-input-wrap">
-                  <input
-                    ref={artistInputRef}
-                    type="text"
-                    className="pe-suggest-input"
-                    value={artistInput}
-                    onChange={(e) => setArtistInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitArtistInput(); } if (e.key === "Escape") { setArtistInputOpen(false); setArtistInput(""); } }}
-                    onBlur={commitArtistInput}
-                    placeholder="アーティスト名を入力して Enter"
-                    maxLength={30}
-                  />
-                  <div className="pe-suggest-close" onClick={() => { setArtistInputOpen(false); setArtistInput(""); }}>
-                    <X size={12} color="var(--text3)" />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <TagAutocompleteInput
+            key={`artist-${editSession}`}
+            label="好きなアーティスト"
+            hint={`任意・最大${MAX_TAGS}件`}
+            value={artists}
+            onChange={setArtists}
+            searchType="artist"
+            placeholder="アーティスト名を入力して Enter"
+            maxTags={MAX_TAGS}
+          />
 
           {/* 好きな曲 */}
-          <div className="pe-section">
-            <div className="pe-section-label">
-              好きな曲
-              <span className="pe-section-hint">任意・最大{MAX_TAGS}件</span>
-            </div>
-            <div className="pe-tag-grid">
-              {tracks.map((t) => (
-                <span key={t} className="pe-tag">
-                  {t}
-                  <span className="pe-tag-x" onClick={() => setTracks((p) => p.filter((v) => v !== t))}>
-                    <X size={10} color="var(--red2)" />
-                  </span>
-                </span>
-              ))}
-              {!trackInputOpen && (
-                <button
-                  type="button"
-                  className="pe-tag-add"
-                  onClick={() => setTrackInputOpen(true)}
-                  disabled={tracks.length >= MAX_TAGS}
-                >
-                  <Plus size={11} />
-                  追加
-                </button>
-              )}
-            </div>
-            {trackInputOpen && (
-              <div className="pe-suggest-wrap">
-                <div className="pe-suggest-input-wrap">
-                  <input
-                    ref={trackInputRef}
-                    type="text"
-                    className="pe-suggest-input"
-                    value={trackInput}
-                    onChange={(e) => setTrackInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitTrackInput(); } if (e.key === "Escape") { setTrackInputOpen(false); setTrackInput(""); } }}
-                    onBlur={commitTrackInput}
-                    placeholder="曲名を入力して Enter"
-                    maxLength={30}
-                  />
-                  <div className="pe-suggest-close" onClick={() => { setTrackInputOpen(false); setTrackInput(""); }}>
-                    <X size={12} color="var(--text3)" />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <TagAutocompleteInput
+            key={`track-${editSession}`}
+            label="好きな曲"
+            hint={`任意・最大${MAX_TAGS}件`}
+            value={tracks}
+            onChange={setTracks}
+            searchType="song"
+            placeholder="曲名を入力して Enter"
+            maxTags={MAX_TAGS}
+          />
 
           {/* エリア */}
           <div className="pe-section">

@@ -477,6 +477,23 @@ body {
   cursor: pointer; flex-shrink: 0; border: none;
 }
 
+/* Suggest dropdown (iTunes候補) */
+.pe-suggest-dropdown {
+  margin-top: 6px;
+  background: var(--card2); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  border: 1px solid var(--border2); border-radius: 12px;
+  max-height: 220px; overflow-y: auto;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+.pe-suggest-item {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 10px 14px; font-size: 13px; color: var(--text);
+  cursor: pointer; transition: background 0.1s;
+}
+.pe-suggest-item:hover, .pe-suggest-item.active { background: rgba(232,74,95,0.06); }
+.pe-suggest-item-sub { font-size: 11px; color: var(--text3); }
+.pe-suggest-loading { padding: 10px 14px; font-size: 12px; color: var(--text3); }
+
 /* Area select */
 .pe-select-wrap {
   background: var(--card); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
