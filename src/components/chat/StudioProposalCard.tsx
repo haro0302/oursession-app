@@ -144,21 +144,29 @@ export default function StudioProposalCard({
         {footer}
       </div>
 
-      {interactive && !booked && chosen !== null && mineProp && role === "host" && (
+      {interactive && !mineProp && chosen === null && !booked && (
+        <div style={{ fontSize: "11px", color: "var(--text3)", lineHeight: 1.6, marginTop: "6px" }}>
+          候補日が合わない場合はチャットで相談してみましょう
+        </div>
+      )}
+
+      {interactive && !booked && mineProp && role === "host" && (
         <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
-          <button
-            type="button"
-            onClick={onMarkBooked}
-            disabled={booking}
-            style={{
-              width: "100%", padding: "11px", borderRadius: "12px", fontSize: "13.5px", fontWeight: 700,
-              cursor: booking ? "default" : "pointer", fontFamily: "inherit",
-              background: "var(--red)", border: "1px solid var(--red)", color: "white",
-              boxShadow: "0 4px 14px rgba(232,74,95,0.35)",
-            }}
-          >
-            {booking ? "送信中…" : "スタジオを押さえた"}
-          </button>
+          {chosen !== null && (
+            <button
+              type="button"
+              onClick={onMarkBooked}
+              disabled={booking}
+              style={{
+                width: "100%", padding: "11px", borderRadius: "12px", fontSize: "13.5px", fontWeight: 700,
+                cursor: booking ? "default" : "pointer", fontFamily: "inherit",
+                background: "var(--red)", border: "1px solid var(--red)", color: "white",
+                boxShadow: "0 4px 14px rgba(232,74,95,0.35)",
+              }}
+            >
+              {booking ? "送信中…" : "スタジオを押さえた"}
+            </button>
+          )}
           <button
             type="button"
             onClick={onRedo}
@@ -168,7 +176,7 @@ export default function StudioProposalCard({
               textDecoration: "underline", textUnderlineOffset: "3px",
             }}
           >
-            枠を出しなおす
+            別の候補を出す
           </button>
         </div>
       )}
