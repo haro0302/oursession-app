@@ -1,29 +1,59 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import { X, Share } from "lucide-react";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
+// iOS Safari は beforeinstallprompt を発火しないため、Web標準APIでは
+// インストール状態もサイト側から検知できない。UAとシェア導線の案内で代替する。
+function isIosSafari() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  const isIos = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isOtherIosBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  return isIos && !isOtherIosBrowser;
+}
+
+function isStandalone() {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
 export default function InstallBanner() {
   const [visible, setVisible] = useState(false);
+  const [mode, setMode] = useState<"android" | "ios">("android");
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.matchMedia("(display-mode: standalone)").matches) return;
+    if (isStandalone()) return;
     if (localStorage.getItem("install_dismissed") === "true") return;
 
     const count = parseInt(localStorage.getItem("our_session_visits") || "0") + 1;
     localStorage.setItem("our_session_visits", String(count));
 
+    if (isIosSafari()) {
+      if (count >= 2) {
+        setMode("ios");
+        setVisible(true);
+      }
+      return;
+    }
+
     function handlePrompt(e: Event) {
       e.preventDefault();
       deferredPrompt.current = e as BeforeInstallPromptEvent;
-      if (count >= 2) setVisible(true);
+      if (count >= 2) {
+        setMode("android");
+        setVisible(true);
+      }
     }
 
     window.addEventListener("beforeinstallprompt", handlePrompt);
@@ -71,27 +101,36 @@ export default function InstallBanner() {
       }}
     >
       <span style={{ fontSize: "20px", flexShrink: 0 }}>🎵</span>
-      <span style={{ flex: 1, fontSize: "13px", color: "var(--text2)", lineHeight: 1.4 }}>
-        ホーム画面に追加すると、すぐに開けます
-      </span>
-      <button
-        type="button"
-        onClick={handleInstall}
-        style={{
-          background: "var(--red)",
-          border: "none",
-          borderRadius: "10px",
-          padding: "7px 13px",
-          fontSize: "12px",
-          fontWeight: 700,
-          color: "#fff",
-          cursor: "pointer",
-          flexShrink: 0,
-          boxShadow: "0 2px 8px rgba(232,74,95,0.35)",
-        }}
-      >
-        追加する
-      </button>
+      {mode === "ios" ? (
+        <span style={{ flex: 1, fontSize: "13px", color: "var(--text2)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
+          <Share size={14} style={{ flexShrink: 0 }} />
+          共有ボタンから「ホーム画面に追加」で、すぐに開けます
+        </span>
+      ) : (
+        <>
+          <span style={{ flex: 1, fontSize: "13px", color: "var(--text2)", lineHeight: 1.4 }}>
+            ホーム画面に追加すると、すぐに開けます
+          </span>
+          <button
+            type="button"
+            onClick={handleInstall}
+            style={{
+              background: "var(--red)",
+              border: "none",
+              borderRadius: "10px",
+              padding: "7px 13px",
+              fontSize: "12px",
+              fontWeight: 700,
+              color: "#fff",
+              cursor: "pointer",
+              flexShrink: 0,
+              boxShadow: "0 2px 8px rgba(232,74,95,0.35)",
+            }}
+          >
+            追加する
+          </button>
+        </>
+      )}
       <button
         type="button"
         onClick={handleDismiss}
