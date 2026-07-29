@@ -23,6 +23,8 @@ type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 type AssistAnswerRow = Database["public"]["Tables"]["session_assist_answers"]["Row"];
 type StudioProposalRow = Database["public"]["Tables"]["session_assist_studio_proposals"]["Row"];
 
+const COMPOSER_MAX_HEIGHT = 120;
+
 interface Props {
   answerId: string;
   sessionTitle: string;
@@ -74,11 +76,20 @@ export default function ChatRoom({
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const supabase = createClient();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, assistAnswers, studioProposals]);
+
+  // 入力欄: 改行するたびに、下端を固定したまま上へせり上がるように高さを合わせる
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, COMPOSER_MAX_HEIGHT)}px`;
+  }, [body]);
 
   useEffect(() => {
     if (role === "pending") return;
@@ -575,14 +586,12 @@ export default function ChatRoom({
             alignItems: "flex-end",
           }}
         >
-          <input
-            type="text"
+          <textarea
+            ref={composerRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); handleSend(); }
-            }}
             placeholder="メッセージを入力"
+            rows={1}
             style={{
               flex: 1,
               background: "var(--card)",
@@ -590,10 +599,14 @@ export default function ChatRoom({
               borderRadius: "20px",
               padding: "10px 16px",
               fontSize: "14px",
+              lineHeight: 1.5,
               color: "var(--text)",
               outline: "none",
               fontFamily: "inherit",
               WebkitAppearance: "none",
+              resize: "none",
+              maxHeight: `${COMPOSER_MAX_HEIGHT}px`,
+              overflowY: "auto",
             }}
           />
           <button
