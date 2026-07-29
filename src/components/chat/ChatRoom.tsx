@@ -12,7 +12,9 @@ import AssistDeckDrawer from "@/components/chat/AssistDeckDrawer";
 import AssistRecordList from "@/components/chat/AssistRecordList";
 import SessionAssistPanel from "@/components/chat/SessionAssistPanel";
 import StudioProposalDrawer from "@/components/chat/StudioProposalDrawer";
+import StudioBookedCelebration from "@/components/chat/StudioBookedCelebration";
 import { timeAgo } from "@/lib/time";
+import { hasSeenStudioBooked, markStudioBookedSeen } from "@/lib/studioBookedSeen";
 import type { MessageWithSender, PendingAnswerWithSender } from "@/app/chat/[answerId]/page";
 import type { AssistAnswerValue, Database, StudioProposal, StudioSlot } from "@/types/database";
 
@@ -63,6 +65,8 @@ export default function ChatRoom({
   const [studioDrawerOpen, setStudioDrawerOpen] = useState(false);
   const [choosingId, setChoosingId] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [celebrationProposalId, setCelebrationProposalId] = useState<string | null>(null);
+  const celebratedRef = useRef<Set<string>>(new Set());
   const [pendingAnswer, setPendingAnswer] = useState<PendingAnswerWithSender | null>(initialPendingAnswer);
   const [chatVisible, setChatVisible] = useState(
     role === "guest" || (role === "host" && !initialPendingAnswer)
@@ -80,6 +84,16 @@ export default function ChatRoom({
     if (role === "pending") return;
     markChatRead(answerId);
   }, [answerId, role]);
+
+  // 見逃した「スタジオが決定しました！」を、次に部屋を開いたときに一度だけ出す
+  useEffect(() => {
+    if (role === "pending") return;
+    const bookedProposal = initialStudioProposals.find((p) => p.booked_at);
+    if (bookedProposal && !hasSeenStudioBooked(bookedProposal.id)) {
+      const t = setTimeout(() => triggerCelebration(bookedProposal.id), 500);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (role === "pending") return;
@@ -122,6 +136,8 @@ export default function ChatRoom({
         (payload) => {
           const row = payload.new as StudioProposalRow;
           setStudioProposals((prev) => {
+            const before = prev.find((p) => p.id === row.id);
+            if (!before?.booked_at && row.booked_at) triggerCelebration(row.id);
             const exists = prev.some((p) => p.id === row.id);
             if (exists) return prev.map((p) => (p.id === row.id ? row : p));
             return [...prev, row].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -246,9 +262,17 @@ export default function ChatRoom({
       setStudioProposals((prev) =>
         prev.map((p) => (p.id === proposalId ? { ...p, booked_at: new Date().toISOString() } : p))
       );
+      triggerCelebration(proposalId);
     } finally {
       setBookingId(null);
     }
+  }
+
+  function triggerCelebration(proposalId: string) {
+    if (celebratedRef.current.has(proposalId)) return;
+    celebratedRef.current.add(proposalId);
+    markStudioBookedSeen(proposalId);
+    setCelebrationProposalId(proposalId);
   }
 
   const isInputVisible = role !== "pending";
@@ -610,6 +634,11 @@ export default function ChatRoom({
         open={studioDrawerOpen}
         onClose={() => setStudioDrawerOpen(false)}
         onSubmit={submitStudioProposal}
+      />
+
+      <StudioBookedCelebration
+        open={celebrationProposalId !== null}
+        onClose={() => setCelebrationProposalId(null)}
       />
     </div>
   );
