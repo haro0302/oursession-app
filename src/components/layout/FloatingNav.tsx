@@ -146,14 +146,13 @@ export default function FloatingNav({ onPostClick }: FloatingNavProps) {
               height: "21px",
               padding: "0 3px",
               borderRadius: "13px",
-              background: "var(--red)",
-              color: "white",
+              background: "white",
+              color: "var(--red)",
               fontSize: "10px",
               fontWeight: 700,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "2px solid var(--bg)",
               zIndex: 4,
             }}
           >
