@@ -66,6 +66,9 @@ export default function LandingPage() {
           <button type="button" className="lp-cta" onClick={() => setAuthOpen(true)}>
             早速はじめる
           </button>
+          <Link href="/timeline" className="lp-secondary-link">
+            まずはみんなの音を聞いてみる →
+          </Link>
           <div className="lp-cta-note">アプリ不要。ブラウザですぐ始められます</div>
         </section>
 
@@ -164,6 +167,9 @@ export default function LandingPage() {
           <button type="button" className="lp-cta" onClick={() => setAuthOpen(true)}>
             早速はじめる
           </button>
+          <Link href="/timeline" className="lp-secondary-link">
+            まずはみんなの音を聞いてみる →
+          </Link>
         </div>
         <div className="lp-footer">
           <Link href="/terms" className="lp-footer-link">

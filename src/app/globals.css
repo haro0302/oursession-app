@@ -998,6 +998,13 @@ body {
   color: var(--text3);
   margin-top: 2px;
 }
+.lp-secondary-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  text-decoration: none;
+}
+.lp-secondary-link:hover { color: var(--text); }
 
 .lp-section {
   padding: 56px 4px;
