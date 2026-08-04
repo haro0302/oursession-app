@@ -1,4 +1,4 @@
-const CACHE_NAME = "our-session-shell-v5";
+const CACHE_NAME = "our-session-shell-dev";
 const SHELL_URLS = ["/", "/timeline", "/mypage", "/notifications", "/offline.html"];
 
 self.addEventListener("install", (event) => {
