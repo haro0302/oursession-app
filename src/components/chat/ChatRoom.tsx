@@ -375,7 +375,7 @@ export default function ChatRoom({
                 width: "36px",
                 height: "36px",
                 borderRadius: "8px",
-                background: "linear-gradient(135deg, var(--red-bg), rgba(232,74,95,0.04))",
+                background: "linear-gradient(135deg, var(--red-bg), rgba(181,89,60,0.04))",
                 border: "1px solid var(--red-border)",
                 display: "flex",
                 alignItems: "center",
@@ -549,7 +549,7 @@ export default function ChatRoom({
                         color: isMine ? "white" : "var(--text)",
                         lineHeight: 1.5,
                         wordBreak: "break-word",
-                        boxShadow: isMine ? "0 3px 10px rgba(232,74,95,0.3)" : "none",
+                        
                       }}
                     >
                       {msg.body}
@@ -758,7 +758,7 @@ function AnswerCard({
             background: "var(--red)",
             border: "1px solid var(--red)",
             color: "white",
-            boxShadow: "0 4px 14px rgba(232,74,95,0.4)",
+            
           }}
         >
           承認する

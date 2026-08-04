@@ -15,7 +15,7 @@ interface Props {
 
 const FILTER_OPTIONS: Record<FilterKey, { title: string; options: string[] }> = {
   instrument: {
-    title: "楽器",
+    title: "希望アンサー",
     options: ["ボーカル", "ギター", "ベース", "ドラム", "ピアノ", "キーボード", "ウクレレ", "サックス", "トランペット", "バイオリン", "和楽器", "DTM", "その他"],
   },
   genre: {
@@ -177,7 +177,7 @@ export default function FilterSheet({ open, filterKey, selected, onToggle, onCle
               cursor: "pointer",
               background: "var(--red)",
               color: "white",
-              boxShadow: "0 4px 14px rgba(232,74,95,0.4)",
+              
               fontFamily: "inherit",
               transition: "all 0.15s",
             }}

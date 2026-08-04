@@ -7,7 +7,7 @@ import Avatar from "@/components/ui/Avatar";
 import PracticeBadge from "@/components/ui/PracticeBadge";
 import { updateAnswerStatus, insertMessage } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import type { AnswerWithContext } from "@/app/(app)/notifications/page";
+import type { AnswerWithContext } from "@/components/notifications/NotificationsView";
 
 interface Props {
   answers: AnswerWithContext[];
@@ -87,7 +87,7 @@ export default function IncomingAnswerList({ answers: initial, currentUserId }: 
             <button
               type="button"
               onClick={() => handleApprove(answer)}
-              style={{ flex: 2, padding: "10px", background: "var(--red)", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, color: "white", cursor: "pointer", boxShadow: "0 3px 10px rgba(232,74,95,0.35)" }}
+              style={{ flex: 2, padding: "10px", background: "var(--red)", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, color: "white", cursor: "pointer", }}
             >
               承認する
             </button>

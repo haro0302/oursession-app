@@ -161,7 +161,7 @@ export default function StudioProposalCard({
                 width: "100%", padding: "11px", borderRadius: "12px", fontSize: "13.5px", fontWeight: 700,
                 cursor: booking ? "default" : "pointer", fontFamily: "inherit",
                 background: "var(--red)", border: "1px solid var(--red)", color: "white",
-                boxShadow: "0 4px 14px rgba(232,74,95,0.35)",
+                
               }}
             >
               {booking ? "送信中…" : "スタジオを押さえた"}

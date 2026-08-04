@@ -90,7 +90,7 @@ export default function TimelineList({ sessions, savedIds, answeredIds, currentU
 
   return (
     <>
-      <div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {visibleSessions.map((session) => (
           <SessionCard
             key={session.id}

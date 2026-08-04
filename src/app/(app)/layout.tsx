@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase";
-import Aurora from "@/components/layout/Aurora";
 import FloatingNav from "@/components/layout/FloatingNav";
 import AuthGateDrawer, {
   AuthGateRegistrar,
@@ -89,7 +88,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           overflow: "hidden",
         }}
       >
-        <Aurora />
         <AuthGateRegistrar onOpen={handleOpenAuthGate} />
         <div
           style={{

@@ -9,18 +9,18 @@ export default function PracticeBadge({ mini = false }: PracticeBadgeProps) {
         style={{
           display: "inline-flex",
           alignItems: "center",
-          background: "linear-gradient(135deg, #fff89a 0%, #ff9a5a 100%)",
-          borderRadius: "8px",
-          padding: "2px 8px",
-          fontSize: "9px",
+          background: "linear-gradient(100deg, #ffd884, #ffa964)",
+          borderRadius: "9px",
+          height: "18px",
+          padding: "0 9px",
+          fontSize: "11.5px",
           fontWeight: 700,
           color: "#3a2a00",
-          letterSpacing: "0.3px",
+          letterSpacing: "0.02em",
           whiteSpace: "nowrap",
-          lineHeight: 1.5,
         }}
       >
-        🔰 練習中
+        練習中
       </span>
     );
   }
@@ -30,7 +30,7 @@ export default function PracticeBadge({ mini = false }: PracticeBadgeProps) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        background: "linear-gradient(135deg, #fff89a 0%, #ff9a5a 100%)",
+        background: "linear-gradient(100deg, #ffd884, #ffa964)",
         borderRadius: "8px",
         padding: "3px 10px",
         fontSize: "10px",
@@ -41,7 +41,7 @@ export default function PracticeBadge({ mini = false }: PracticeBadgeProps) {
         lineHeight: 1.5,
       }}
     >
-      🔰 練習中
+      練習中
     </span>
   );
 }

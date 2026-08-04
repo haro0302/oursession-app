@@ -99,7 +99,7 @@ function NotifRow({ item, isUnread, onClick }: { item: DerivedNotif; isUnread: b
         display: "flex",
         alignItems: "flex-start",
         gap: "11px",
-        background: isUnread ? "rgba(232,74,95,0.06)" : "var(--card)",
+        background: isUnread ? "rgba(181,89,60,0.06)" : "var(--card)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
         border: `1px solid ${isUnread ? "var(--red-border)" : "var(--border)"}`,

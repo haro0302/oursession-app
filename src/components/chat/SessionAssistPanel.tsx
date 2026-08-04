@@ -312,7 +312,7 @@ function PrimaryButton({
         color: disabled ? "var(--text3)" : "white",
         fontSize: "14.5px", fontWeight: 700,
         borderRadius: "14px", padding: "13px",
-        boxShadow: disabled ? "none" : "0 4px 14px rgba(232,74,95,0.35)",
+        
       }}
     >
       {children}

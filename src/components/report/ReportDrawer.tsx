@@ -123,8 +123,8 @@ export default function ReportDrawer({ open, onClose, reporterId, targetUserId, 
                       gap: "10px",
                       padding: "11px 14px",
                       borderRadius: "12px",
-                      border: `1px solid ${selected ? "var(--red-border, rgba(232,74,95,0.32))" : "var(--border)"}`,
-                      background: selected ? "var(--red-bg, rgba(232,74,95,0.10))" : "transparent",
+                      border: `1px solid ${selected ? "var(--red-border, rgba(181,89,60,0.32))" : "var(--border)"}`,
+                      background: selected ? "var(--red-bg, rgba(181,89,60,0.10))" : "transparent",
                       cursor: "pointer",
                       textAlign: "left",
                       transition: "all 0.15s",
@@ -168,7 +168,7 @@ export default function ReportDrawer({ open, onClose, reporterId, targetUserId, 
             type="button"
             onClick={handleSubmit}
             disabled={!canSubmit}
-            style={{ width: "100%", background: canSubmit ? "var(--red)" : "var(--card)", border: canSubmit ? "none" : "1px solid var(--border)", borderRadius: "16px", padding: "15px", fontSize: "15px", fontWeight: 700, color: canSubmit ? "white" : "var(--text3)", cursor: canSubmit ? "pointer" : "not-allowed", transition: "background 0.3s, color 0.3s, box-shadow 0.3s", boxShadow: canSubmit ? "0 4px 16px rgba(232,74,95,0.35)" : "none" }}
+            style={{ width: "100%", background: canSubmit ? "var(--red)" : "var(--card)", border: canSubmit ? "none" : "1px solid var(--border)", borderRadius: "16px", padding: "15px", fontSize: "15px", fontWeight: 700, color: canSubmit ? "white" : "var(--text3)", cursor: canSubmit ? "pointer" : "not-allowed", transition: "background 0.3s, color 0.3s" }}
           >
             {submitting ? "送信中…" : "通報する"}
           </button>

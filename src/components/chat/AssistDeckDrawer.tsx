@@ -211,7 +211,7 @@ export default function AssistDeckDrawer({ open, onClose, initialIndex, mine, on
               fontFamily: "inherit", border: canSubmit() ? "1px solid var(--red)" : "1px solid var(--border)",
               background: canSubmit() ? "var(--red)" : "var(--card2)",
               color: canSubmit() ? "white" : "var(--text3)",
-              boxShadow: canSubmit() ? "0 4px 14px rgba(232,74,95,0.35)" : "none",
+              
               display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
             }}
           >
@@ -230,7 +230,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
       type="button"
       onClick={onClick}
       style={{
-        background: active ? "rgba(232,74,95,0.04)" : "var(--card)",
+        background: active ? "rgba(181,89,60,0.04)" : "var(--card)",
         border: active ? "1px solid var(--red-border)" : "1px solid var(--border)",
         color: active ? "var(--red2)" : "var(--text2)",
         borderRadius: "12px",

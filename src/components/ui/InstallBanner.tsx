@@ -96,7 +96,7 @@ export default function InstallBanner() {
         gap: "10px",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.35)",
+        
         animation: "slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both",
       }}
     >
@@ -124,7 +124,7 @@ export default function InstallBanner() {
               color: "#fff",
               cursor: "pointer",
               flexShrink: 0,
-              boxShadow: "0 2px 8px rgba(232,74,95,0.35)",
+              
             }}
           >
             追加する

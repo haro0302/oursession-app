@@ -109,7 +109,7 @@ export default function BlockConfirmDrawer({ open, onClose, currentUserId, targe
               type="button"
               onClick={handleBlock}
               disabled={blocking}
-              style={{ flex: 1, background: blocking ? "var(--card)" : "var(--red)", border: "none", borderRadius: "14px", padding: "13px", fontSize: "14px", fontWeight: 700, color: blocking ? "var(--text3)" : "white", cursor: blocking ? "not-allowed" : "pointer", boxShadow: blocking ? "none" : "0 3px 12px rgba(232,74,95,0.35)", transition: "all 0.2s" }}
+              style={{ flex: 1, background: blocking ? "var(--card)" : "var(--red)", border: "none", borderRadius: "14px", padding: "13px", fontSize: "14px", fontWeight: 700, color: blocking ? "var(--text3)" : "white", cursor: blocking ? "not-allowed" : "pointer", transition: "all 0.2s" }}
             >
               {blocking ? "処理中…" : "ブロックする"}
             </button>

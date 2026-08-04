@@ -27,7 +27,7 @@ function formatCandidateLabel(iso: string): string {
 
 function markStyle(value: ScheduleAnswerValue | undefined): { label: string; color: string; background: string; border: string } {
   if (value === "ok") {
-    return { label: "○", color: "var(--red2)", background: "rgba(232,74,95,0.04)", border: "1px solid var(--red-border)" };
+    return { label: "○", color: "var(--red2)", background: "rgba(181,89,60,0.04)", border: "1px solid var(--red-border)" };
   }
   if (value === "maybe") {
     return { label: "△", color: "var(--text2)", background: "var(--card2)", border: "1px solid var(--border)" };
@@ -100,7 +100,7 @@ export default function SchedulePollCard({ poll, members, currentUserId }: Props
         <div
           style={{
             width: "30px", height: "30px", borderRadius: "9px",
-            background: "linear-gradient(135deg, var(--red-bg), rgba(232,74,95,0.04))",
+            background: "linear-gradient(135deg, var(--red-bg), rgba(181,89,60,0.04))",
             border: "1px solid var(--red-border)",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
           }}
@@ -196,7 +196,7 @@ export default function SchedulePollCard({ poll, members, currentUserId }: Props
               background: canSubmit ? "var(--red)" : "var(--card2)",
               border: canSubmit ? "1px solid var(--red)" : "1px solid var(--border)",
               color: canSubmit ? "white" : "var(--text3)",
-              boxShadow: canSubmit ? "0 4px 14px rgba(232,74,95,0.4)" : "none",
+              
             }}
           >
             {submitting ? "送信中…" : hasSubmitted ? "更新する" : "回答する"}

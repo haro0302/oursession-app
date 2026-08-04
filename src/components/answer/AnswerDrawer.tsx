@@ -144,7 +144,7 @@ export default function AnswerDrawer({ open, onClose, session, currentUserId, on
               cursor: canSubmit ? "pointer" : "not-allowed",
               fontFamily: "inherit", transition: "all 0.2s",
               display: "inline-flex", alignItems: "center", gap: "5px",
-              boxShadow: canSubmit ? "0 4px 14px rgba(232,74,95,0.4)" : "none",
+              
             }}
           >
             <Send size={13} />

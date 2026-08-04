@@ -46,7 +46,7 @@ export default function StudioBookedCelebration({ open, onClose }: Props) {
           border: "1px solid var(--red-border)", borderRadius: "22px",
           padding: "26px 22px 24px",
           textAlign: "center",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+          
           animation: "studioBookedPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both",
         }}
       >
@@ -55,7 +55,7 @@ export default function StudioBookedCelebration({ open, onClose }: Props) {
             width: "56px", height: "56px", margin: "0 auto 14px", borderRadius: "50%",
             background: "linear-gradient(135deg, var(--red), var(--red2))",
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 6px 20px rgba(232,74,95,0.4)",
+            
           }}
         >
           <PartyPopper size={26} color="white" />

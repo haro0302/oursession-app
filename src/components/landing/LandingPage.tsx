@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Music, Repeat, MessagesSquare } from "lucide-react";
-import Aurora from "@/components/layout/Aurora";
 import AuthGateDrawer from "@/components/auth/AuthGateDrawer";
 
 const REAL_FLOW = [
@@ -53,7 +52,6 @@ export default function LandingPage() {
 
   return (
     <div className="lp-page">
-      <Aurora />
       <div className="lp-content">
         {/* ① Hero */}
         <section className="lp-hero">

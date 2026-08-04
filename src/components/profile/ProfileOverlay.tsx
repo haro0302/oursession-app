@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, MoreHorizontal, ExternalLink } from "lucide-react";
 import { normalizeUsername, soundcloudHref } from "@/lib/sns";
 import { createClient } from "@/lib/supabase";
-import Aurora from "@/components/layout/Aurora";
 import PracticeBadge from "@/components/ui/PracticeBadge";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import ReportDrawer from "@/components/report/ReportDrawer";
@@ -183,8 +182,6 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
           transition: "transform 0.32s cubic-bezier(0.4,0,0.2,1)",
         }}
       >
-        <Aurora />
-
         {/* ヘッダー */}
         <div
           style={{
@@ -258,7 +255,7 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
                       borderRadius: "14px",
                       overflow: "hidden",
                       minWidth: "148px",
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                      
                     }}
                   >
                     <button
@@ -387,7 +384,7 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
                     height: "96px",
                     borderRadius: "50%",
                     padding: "3px",
-                    background: "linear-gradient(135deg, rgba(232,140,90,0.3), rgba(232,74,95,0.2))",
+                    background: "linear-gradient(135deg, rgba(232,140,90,0.3), rgba(181,89,60,0.2))",
                     marginBottom: "14px",
                     flexShrink: 0,
                   }}

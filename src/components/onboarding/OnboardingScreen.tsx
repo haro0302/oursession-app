@@ -65,12 +65,6 @@ export default function OnboardingScreen({ userId }: Props) {
 
   return (
     <div className="ob-screen">
-      {/* aurora background */}
-      <div className="aurora">
-        <span className="blob1" />
-        <span className="blob2" />
-      </div>
-
       {/* 戻るボタン: Step 1・4 では非表示 */}
       <button
         className="ob-back"

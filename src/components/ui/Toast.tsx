@@ -103,7 +103,7 @@ function ToastItem({
         gap: "10px",
         maxWidth: "calc(390px - 36px)",
         minWidth: "240px",
-        boxShadow: "0 14px 40px rgba(0,0,0,0.45)",
+        
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(20px)",
         transition: "opacity 0.32s ease, transform 0.4s cubic-bezier(0.4,1.4,0.5,1)",

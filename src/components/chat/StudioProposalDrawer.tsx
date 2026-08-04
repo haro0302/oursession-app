@@ -365,7 +365,7 @@ function primaryBtnStyle(enabled: boolean): CSSProperties {
     fontFamily: "inherit", background: enabled ? "var(--red)" : "var(--card2)", color: enabled ? "white" : "var(--text3)",
     fontSize: "14.5px", fontWeight: 700, borderRadius: "14px", padding: "13px",
     display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-    boxShadow: enabled ? "0 4px 14px rgba(232,74,95,0.35)" : "none",
+    
   };
 }
 
@@ -385,7 +385,7 @@ function Chip({ label, active, small, onClick }: { label: string; active: boolea
       type="button"
       onClick={onClick}
       style={{
-        background: active ? "rgba(232,74,95,0.04)" : "var(--card)",
+        background: active ? "rgba(181,89,60,0.04)" : "var(--card)",
         border: active ? "1px solid var(--red-border)" : "1px solid var(--border)",
         color: active ? "var(--red2)" : "var(--text2)",
         borderRadius: "12px",

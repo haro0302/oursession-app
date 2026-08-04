@@ -173,7 +173,7 @@ export default function AccountInfoOverlay({ open, onClose, currentUserId }: Pro
               alignItems: "center",
               gap: "10px",
               padding: "14px 18px",
-              background: "rgba(232,74,95,0.06)",
+              background: "rgba(181,89,60,0.06)",
               border: "1px solid var(--red-border)",
               borderRadius: "14px",
               cursor: "pointer",

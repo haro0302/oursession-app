@@ -227,7 +227,7 @@ export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved
           width: "44px", height: "44px", borderRadius: "50%",
           background: "var(--red)", flexShrink: 0,
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 14px rgba(232,74,95,0.4)",
+          
         }}>
           <MicIcon />
         </div>
@@ -295,7 +295,7 @@ export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved
         <button type="button" onClick={reset} style={{ flex: 1, padding: "12px", background: "var(--card)", border: "1px solid var(--border)", borderRadius: "14px", color: "var(--text2)", fontSize: "14px", cursor: "pointer" }}>
           やめる
         </button>
-        <button type="button" onClick={() => mediaRecorderRef.current?.stop()} style={{ flex: 1, padding: "12px", background: "var(--red)", border: "none", borderRadius: "14px", color: "white", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 12px rgba(232,74,95,0.4)" }}>
+        <button type="button" onClick={() => mediaRecorderRef.current?.stop()} style={{ flex: 1, padding: "12px", background: "var(--red)", border: "none", borderRadius: "14px", color: "white", fontSize: "14px", fontWeight: 700, cursor: "pointer", }}>
           停止
         </button>
       </div>
@@ -312,7 +312,7 @@ export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved
         <button type="button" onClick={reset} style={{ flex: 1, padding: "12px", background: "var(--card)", border: "1px solid var(--border)", borderRadius: "14px", color: "var(--text2)", fontSize: "14px", cursor: "pointer" }}>
           もう一度
         </button>
-        <button type="button" onClick={handleSendRecording} style={{ flex: 1, padding: "12px", background: "var(--red)", border: "none", borderRadius: "14px", color: "white", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 12px rgba(232,74,95,0.4)" }}>
+        <button type="button" onClick={handleSendRecording} style={{ flex: 1, padding: "12px", background: "var(--red)", border: "none", borderRadius: "14px", color: "white", fontSize: "14px", fontWeight: 700, cursor: "pointer", }}>
           これで送る
         </button>
       </div>

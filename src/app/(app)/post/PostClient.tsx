@@ -176,7 +176,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
             padding: "7px 18px",
             borderRadius: "16px",
             cursor: canPublish ? "pointer" : "not-allowed",
-            boxShadow: canPublish ? "0 4px 14px rgba(232,74,95,0.4)" : "none",
+            
             transition: "all 0.18s",
             fontFamily: "inherit",
           }}
@@ -639,7 +639,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
                             width: "16px",
                             height: "16px",
                             borderRadius: "50%",
-                            background: "rgba(232,74,95,0.10)",
+                            background: "rgba(181,89,60,0.10)",
                             border: "none",
                             cursor: "pointer",
                             padding: 0,

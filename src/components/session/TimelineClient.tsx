@@ -4,6 +4,7 @@ import { useState } from "react";
 import TimelineHeader from "./TimelineHeader";
 import TimelineList from "./TimelineList";
 import FilterSheet from "./FilterSheet";
+import SearchOverlay from "./SearchOverlay";
 import WelcomeToast from "@/components/ui/WelcomeToast";
 import type { SessionWithAuthor } from "@/lib/db";
 
@@ -22,20 +23,12 @@ export default function TimelineClient({ sessions, savedIds, answeredIds, curren
   const [filterState, setFilterState] = useState<FilterState>({ instrument: [], genre: [], area: [] });
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [filterKey, setFilterKey] = useState<FilterKey | null>(null);
-  const [query, setQuery] = useState("");
-
-  const trimmedQuery = query.trim().toLowerCase();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const filteredSessions = sessions.filter((session) => {
     if (filterState.instrument.length > 0 && !filterState.instrument.some((i) => session.tags.includes(i))) return false;
     if (filterState.genre.length > 0 && !filterState.genre.some((g) => session.tags.includes(g))) return false;
     if (filterState.area.length > 0 && !filterState.area.some((a) => session.author.area === a)) return false;
-    if (trimmedQuery) {
-      const artists = session.author.favorite_artists ?? [];
-      const tracks = session.author.favorite_tracks ?? [];
-      const matches = [...artists, ...tracks].some((v) => v.toLowerCase().includes(trimmedQuery));
-      if (!matches) return false;
-    }
     return true;
   });
 
@@ -67,10 +60,9 @@ export default function TimelineClient({ sessions, savedIds, answeredIds, curren
         currentUserId={currentUserId}
         filterState={filterState}
         onOpenFilter={handleOpenFilter}
-        query={query}
-        onQueryChange={setQuery}
+        onOpenSearch={() => setSearchOpen(true)}
       />
-      <main style={{ padding: "0 20px" }}>
+      <main style={{ padding: "0 16px" }}>
         <TimelineList
           sessions={filteredSessions}
           savedIds={savedIds}
@@ -85,6 +77,14 @@ export default function TimelineClient({ sessions, savedIds, answeredIds, curren
         onToggle={handleToggle}
         onClear={handleClear}
         onClose={() => setFilterSheetOpen(false)}
+      />
+      <SearchOverlay
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        sessions={sessions}
+        savedIds={savedIds}
+        answeredIds={answeredIds}
+        currentUserId={currentUserId}
       />
     </>
   );

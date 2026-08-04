@@ -7,9 +7,10 @@ interface AudioPlayerProps {
   duration?: number;
   showListening?: number;
   peaks?: number[] | null;
+  bare?: boolean;
 }
 
-export default function AudioPlayer({ src, duration, showListening, peaks }: AudioPlayerProps) {
+export default function AudioPlayer({ src, duration, showListening, peaks, bare = false }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -65,25 +66,33 @@ export default function AudioPlayer({ src, duration, showListening, peaks }: Aud
     ));
   }, [peaks, bars]);
 
+  const playIconColor = bare ? "var(--card-solid)" : "var(--on-accent)";
+  const playedBarColor = bare ? "var(--red)" : "var(--accent-muted)";
+  const unplayedBarColor = bare ? "var(--accent-muted)" : "#3a3a44";
+
   return (
     <div>
       <div
-        style={{
-          background: "var(--card2)",
-          border: "1px solid var(--border)",
-          borderRadius: "14px",
-          padding: "10px 12px",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-        }}
+        style={
+          bare
+            ? { display: "flex", alignItems: "center", gap: "14px" }
+            : {
+                background: "var(--card2)",
+                border: "1px solid var(--border)",
+                borderRadius: "14px",
+                padding: "10px 12px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+              }
+        }
       >
         <button
           onClick={togglePlay}
           aria-label={playing ? "一時停止" : "再生"}
           style={{
-            width: "36px",
-            height: "36px",
+            width: bare ? "38px" : "36px",
+            height: bare ? "38px" : "36px",
             borderRadius: "50%",
             background: playing ? "var(--red2)" : "var(--red)",
             display: "flex",
@@ -92,14 +101,13 @@ export default function AudioPlayer({ src, duration, showListening, peaks }: Aud
             flexShrink: 0,
             cursor: "pointer",
             border: "none",
-            boxShadow: "0 4px 12px rgba(232,74,95,0.4)",
             transition: "transform 0.15s",
           }}
         >
           {playing ? (
             <div style={{ display: "flex", gap: "3px" }}>
-              <div style={{ width: "3px", height: "12px", background: "white", borderRadius: "1px" }} />
-              <div style={{ width: "3px", height: "12px", background: "white", borderRadius: "1px" }} />
+              <div style={{ width: "3px", height: "12px", background: playIconColor, borderRadius: "1px" }} />
+              <div style={{ width: "3px", height: "12px", background: playIconColor, borderRadius: "1px" }} />
             </div>
           ) : (
             <div
@@ -108,7 +116,7 @@ export default function AudioPlayer({ src, duration, showListening, peaks }: Aud
                 height: 0,
                 borderTop: "6px solid transparent",
                 borderBottom: "6px solid transparent",
-                borderLeft: "10px solid white",
+                borderLeft: `10px solid ${playIconColor}`,
                 marginLeft: "2px",
               }}
             />
@@ -121,8 +129,8 @@ export default function AudioPlayer({ src, duration, showListening, peaks }: Aud
             minWidth: 0,
             display: "flex",
             alignItems: "center",
-            gap: "1.5px",
-            height: "32px",
+            gap: bare ? "2px" : "1.5px",
+            height: bare ? "39px" : "32px",
             overflow: "hidden",
           }}
         >
@@ -130,11 +138,11 @@ export default function AudioPlayer({ src, duration, showListening, peaks }: Aud
             <div
               key={i}
               style={{
-                background: i < playedBars ? "var(--red)" : "#3a3a44",
+                background: i < playedBars ? playedBarColor : unplayedBarColor,
                 borderRadius: "1px",
                 flex: "1 1 0",
                 minWidth: 0,
-                maxWidth: "3px",
+                maxWidth: "3.2px",
                 height: `${Math.round(h)}px`,
                 transition: "background 0.08s",
               }}
@@ -145,7 +153,7 @@ export default function AudioPlayer({ src, duration, showListening, peaks }: Aud
         <div
           style={{
             fontSize: "10px",
-            color: "var(--text3)",
+            color: bare ? "var(--accent-muted)" : "var(--text3)",
             whiteSpace: "nowrap",
             fontWeight: 500,
             flexShrink: 0,
