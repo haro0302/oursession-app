@@ -584,7 +584,7 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
                     まだセッションカードがありません
                   </div>
                 ) : (
-                  <div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                     {sessions.map((session) => {
                       if (!profile) return null;
                       const sessionWithAuthor: SessionWithAuthor = { ...session, author: profile };

@@ -413,7 +413,7 @@ export default function MypageClient({
             まだセッションカードがありません
           </button>
         ) : (
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             {sessions.map((session) => (
               <SessionCard
                 key={session.id}

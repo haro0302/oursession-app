@@ -298,7 +298,7 @@ export default function SessionCard({
     >
       {/* 他人のカード: 日付行 → アバター・名前・練習中バッジ・保存・⋯行 — timeline default variant */}
       {isDefaultVariant && (
-        <div style={{ padding: "6px 18px 20px" }}>
+        <div style={{ padding: "6px 18px 0" }}>
           <div style={{ textAlign: "right", fontSize: "13px", lineHeight: 1, color: "var(--accent-muted)" }}>
             {dateStr}
           </div>
@@ -550,7 +550,7 @@ export default function SessionCard({
 
       {/* 他人のカード: プロフィール画面表示（アバター行は省略、日付+保存+⋯） */}
       {!isOwn && variant === "profile" && (
-        <div style={{ padding: "6px 18px 20px" }}>
+        <div style={{ padding: "6px 18px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "9px", position: "relative" }}>
             <span style={{ flex: 1, fontSize: "13px", lineHeight: 1, color: "var(--accent-muted)" }}>
               {dateStr}

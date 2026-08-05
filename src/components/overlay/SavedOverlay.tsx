@@ -207,7 +207,7 @@ export default function SavedOverlay({ open, onClose, currentUserId }: Props) {
               </div>
             </div>
           ) : (
-            <div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
               {sessions.filter((s) => !blockedIds.has(s.author_id)).map((session) => (
                 <SessionCard
                   key={session.id}
