@@ -145,7 +145,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
             border: "none",
             fontSize: "13px",
             fontWeight: 500,
-            color: "var(--text2)",
+            color: "var(--accent-muted)",
             cursor: "pointer",
             fontFamily: "inherit",
             padding: "4px 0",
@@ -153,7 +153,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
         >
           キャンセル
         </button>
-        <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)" }}>
+        <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--red)" }}>
           {isEditMode ? "セッションを編集" : "新しいセッション"}
         </span>
         <button
@@ -161,9 +161,9 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
           onClick={handlePublish}
           disabled={!canPublish}
           style={{
-            background: canPublish ? "var(--red)" : "var(--card2)",
-            border: `1px solid ${canPublish ? "var(--red)" : "var(--border)"}`,
-            color: canPublish ? "white" : "var(--text3)",
+            background: canPublish ? "var(--red)" : "transparent",
+            border: `1px solid ${canPublish ? "var(--red)" : "var(--accent-muted)"}`,
+            color: canPublish ? "white" : "var(--accent-muted)",
             fontSize: "13px",
             fontWeight: 700,
             padding: "7px 18px",
@@ -190,7 +190,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
               border: "1px solid var(--border)",
               borderRadius: "16px",
               padding: "14px 16px",
-              margin: "12px 18px 12px",
+              margin: "0 18px 12px",
               display: "flex",
               alignItems: "flex-start",
               gap: "11px",
