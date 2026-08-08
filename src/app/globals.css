@@ -495,9 +495,9 @@ body {
 /* Edit trigger button */
 .pe-edit-btn {
   display: inline-flex; align-items: center; gap: 5px;
-  background: var(--card); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
-  border: 1px solid var(--border); border-radius: 16px;
-  padding: 6px 12px; font-size: 11px; color: var(--text2); font-weight: 600;
+  height: 32px; padding: 0 8.5px;
+  background: transparent; border: 1px solid var(--accent-muted); border-radius: 16px;
+  font-size: 11px; color: var(--accent-muted); font-weight: 500;
   cursor: pointer; font-family: inherit;
 }
 

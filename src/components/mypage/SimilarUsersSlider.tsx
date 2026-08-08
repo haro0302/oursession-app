@@ -55,14 +55,12 @@ export default function SimilarUsersSlider({ users }: Props) {
             alignItems: "center",
             gap: "10px",
             padding: "14px 8px 12px",
-            background: "var(--card)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid var(--border)",
-            borderRadius: "18px",
+            background: "var(--card-solid)",
+            border: "1px solid var(--border-solid)",
+            borderRadius: "12px",
             cursor: "pointer",
             scrollSnapAlign: "start",
-            transition: "transform 0.18s, border-color 0.18s",
+            transition: "transform 0.18s",
           }}
         >
           <Avatar

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import { Settings, ExternalLink } from "lucide-react";
 import { normalizeUsername, soundcloudHref } from "@/lib/sns";
+import { BookmarkIcon, PinIcon } from "@/components/icons/CustomIcons";
 import Avatar from "@/components/ui/Avatar";
 import PracticeBadge from "@/components/ui/PracticeBadge";
 import SimilarUsersSlider from "@/components/mypage/SimilarUsersSlider";
@@ -25,36 +26,43 @@ interface Props {
 }
 
 const INFO_LBL: CSSProperties = {
-  fontSize: "10px",
+  fontSize: "13px",
   fontWeight: 700,
-  color: "var(--text3)",
-  letterSpacing: "0.8px",
-  textTransform: "uppercase",
+  color: "var(--red)",
   marginBottom: "9px",
 };
 
 const SECTION_LBL: CSSProperties = {
-  fontSize: "11px",
+  fontSize: "13px",
   fontWeight: 700,
-  color: "var(--text3)",
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
+  color: "var(--red)",
   margin: "0 4px 12px",
+};
+
+const TAG_STYLE: CSSProperties = {
+  height: "37px",
+  padding: "0 12px",
+  display: "inline-flex",
+  alignItems: "center",
+  border: "1px solid var(--border-solid)",
+  borderRadius: "10px",
+  background: "var(--tag-solid)",
+  color: "var(--accent-light)",
+  fontSize: "13px",
 };
 
 const HERO_BTN: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: "5px",
-  background: "var(--card)",
-  backdropFilter: "blur(20px)",
-  WebkitBackdropFilter: "blur(20px)",
-  border: "1px solid var(--border)",
+  height: "32px",
+  background: "transparent",
+  border: "1px solid var(--accent-muted)",
   borderRadius: "16px",
-  padding: "6px 12px",
+  padding: "0 8.5px",
   fontSize: "11px",
-  fontWeight: 600,
-  color: "var(--text2)",
+  fontWeight: 500,
+  color: "var(--accent-muted)",
   cursor: "pointer",
   fontFamily: "inherit",
 };
@@ -105,11 +113,9 @@ export default function MypageClient({
         <button
           type="button"
           onClick={() => setSavedOpen(true)}
-          style={{ ...HERO_BTN, position: "absolute", top: "14px", left: "4px" }}
+          style={{ ...HERO_BTN, position: "absolute", top: "14px", left: "4px", padding: "0 12.5px" }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2h12a1 1 0 0 1 1 1v19l-7-5-7 5V3a1 1 0 0 1 1-1z" />
-          </svg>
+          <BookmarkIcon size={14} />
           <span>保存</span>
         </button>
 
@@ -131,30 +137,41 @@ export default function MypageClient({
             aria-label="設定"
             style={{
               ...HERO_BTN,
-              padding: "6px 10px",
+              padding: "0 9px",
             }}
           >
-            <Settings size={13} />
+            <Settings size={15} />
           </button>
         </div>
 
-        {/* アバター */}
-        <div style={{ marginBottom: "14px" }}>
+        {/* アバター + 練習中バッジ */}
+        <div style={{ position: "relative", marginBottom: "24px" }}>
           <Avatar
             src={profile?.avatar_url}
             alt={profile?.nickname ?? "アバター"}
             size="xl"
-            ring
             isPractice={false}
           />
+          {profile?.is_practice && (
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                bottom: "-12.5px",
+                transform: "translateX(-50%)",
+              }}
+            >
+              <PracticeBadge />
+            </div>
+          )}
         </div>
 
         {/* ニックネーム */}
         <div
           style={{
-            fontSize: "24px",
+            fontSize: "23px",
             fontWeight: 700,
-            color: "var(--text)",
+            color: "var(--red)",
             letterSpacing: "-0.3px",
             marginBottom: "4px",
           }}
@@ -162,67 +179,43 @@ export default function MypageClient({
           {profile?.nickname ?? "ゲスト"}
         </div>
 
-        {/* エリア + 練習中バッジ */}
-        <div
-          style={{
-            fontSize: "12px",
-            color: "var(--text2)",
-            display: "flex",
-            alignItems: "center",
-            gap: "5px",
-          }}
-        >
-          {profile?.area && (
-            <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-                <circle cx="12" cy="9" r="2.5" />
-              </svg>
-              {profile.area}
-            </>
-          )}
-          {profile?.is_practice && <PracticeBadge />}
-        </div>
+        {/* エリア */}
+        {profile?.area && (
+          <div
+            style={{
+              fontSize: "13px",
+              color: "var(--accent-muted)",
+              display: "flex",
+              alignItems: "center",
+              gap: "4.5px",
+            }}
+          >
+            <PinIcon size={16} />
+            {profile.area}
+          </div>
+        )}
       </section>
 
       {/* INFO CARD */}
       {hasInfoCard && (
         <div
           style={{
-            background: "var(--card)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid var(--border)",
-            borderRadius: "20px",
-            padding: "0 18px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "19px",
+            background: "var(--card-solid)",
+            border: "1px solid var(--border-solid)",
+            borderRadius: "12px",
+            padding: "22px 18px",
             marginBottom: "22px",
           }}
         >
           {instruments.length > 0 && (
-            <div
-              style={{
-                padding: "14px 0",
-                borderBottom:
-                  genres.length > 0 || favoriteArtists.length > 0 || favoriteTracks.length > 0 || !!profile?.bio || hasSns
-                    ? "1px solid var(--border)"
-                    : "none",
-              }}
-            >
+            <div>
               <div style={INFO_LBL}>パート・楽器</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
                 {instruments.map((inst) => (
-                  <span
-                    key={inst}
-                    style={{
-                      background: "var(--red-bg)",
-                      border: "1px solid var(--red-border)",
-                      borderRadius: "12px",
-                      padding: "5px 11px",
-                      fontSize: "11.5px",
-                      fontWeight: 600,
-                      color: "var(--red2)",
-                    }}
-                  >
+                  <span key={inst} style={TAG_STYLE}>
                     {inst}
                   </span>
                 ))}
@@ -230,30 +223,11 @@ export default function MypageClient({
             </div>
           )}
           {genres.length > 0 && (
-            <div
-              style={{
-                padding: "14px 0",
-                borderBottom:
-                  favoriteArtists.length > 0 || favoriteTracks.length > 0 || !!profile?.bio || hasSns
-                    ? "1px solid var(--border)"
-                    : "none",
-              }}
-            >
+            <div>
               <div style={INFO_LBL}>ジャンル</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
                 {genres.map((g) => (
-                  <span
-                    key={g}
-                    style={{
-                      background: "var(--card2)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "12px",
-                      padding: "5px 11px",
-                      fontSize: "11.5px",
-                      fontWeight: 500,
-                      color: "var(--text2)",
-                    }}
-                  >
+                  <span key={g} style={TAG_STYLE}>
                     {g}
                   </span>
                 ))}
@@ -261,27 +235,11 @@ export default function MypageClient({
             </div>
           )}
           {favoriteArtists.length > 0 && (
-            <div
-              style={{
-                padding: "14px 0",
-                borderBottom: favoriteTracks.length > 0 || !!profile?.bio || hasSns ? "1px solid var(--border)" : "none",
-              }}
-            >
+            <div>
               <div style={INFO_LBL}>好きなアーティスト</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
                 {favoriteArtists.map((a) => (
-                  <span
-                    key={a}
-                    style={{
-                      background: "var(--card2)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "12px",
-                      padding: "5px 11px",
-                      fontSize: "11.5px",
-                      fontWeight: 500,
-                      color: "var(--text2)",
-                    }}
-                  >
+                  <span key={a} style={TAG_STYLE}>
                     {a}
                   </span>
                 ))}
@@ -289,27 +247,11 @@ export default function MypageClient({
             </div>
           )}
           {favoriteTracks.length > 0 && (
-            <div
-              style={{
-                padding: "14px 0",
-                borderBottom: !!profile?.bio || hasSns ? "1px solid var(--border)" : "none",
-              }}
-            >
+            <div>
               <div style={INFO_LBL}>好きな曲</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
                 {favoriteTracks.map((t) => (
-                  <span
-                    key={t}
-                    style={{
-                      background: "var(--card2)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "12px",
-                      padding: "5px 11px",
-                      fontSize: "11.5px",
-                      fontWeight: 500,
-                      color: "var(--text2)",
-                    }}
-                  >
+                  <span key={t} style={TAG_STYLE}>
                     {t}
                   </span>
                 ))}
@@ -317,15 +259,15 @@ export default function MypageClient({
             </div>
           )}
           {profile?.bio && (
-            <div style={{ padding: "14px 0", borderBottom: hasSns ? "1px solid var(--border)" : "none" }}>
+            <div>
               <div style={INFO_LBL}>自己紹介</div>
-              <div style={{ fontSize: "13px", color: "var(--text2)", lineHeight: 1.75, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+              <div style={{ fontSize: "13px", color: "var(--accent-light)", lineHeight: 1.75, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                 {profile.bio}
               </div>
             </div>
           )}
           {hasSns && (
-            <div style={{ padding: "14px 0" }}>
+            <div>
               <div style={INFO_LBL}>SNS</div>
               <div className="sns-list">
                 {sns.x && (
@@ -387,7 +329,7 @@ export default function MypageClient({
       <section style={{ marginBottom: "24px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 4px 12px" }}>
           <span style={SECTION_LBL as CSSProperties}>セッションカード</span>
-          <span style={{ fontSize: "11px", color: "var(--text3)", fontWeight: 500 }}>
+          <span style={{ fontSize: "13px", color: "var(--accent-muted)", fontWeight: 700 }}>
             {sessions.length}
           </span>
         </div>
