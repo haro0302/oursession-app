@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Eye } from "lucide-react";
+import { Users } from "lucide-react";
 import AudioUploader from "@/components/audio/AudioUploader";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import FilterSheet from "@/components/session/FilterSheet";
@@ -113,13 +113,6 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
     }
   }
 
-  function removeTag(key: FilterKey, value: string) {
-    setPostTags((prev) => ({
-      ...prev,
-      [key]: prev[key].filter((t) => t !== value),
-    }));
-  }
-
   const TAG_LABELS: Record<FilterKey, string> = {
     instrument: "楽器",
     genre: "ジャンル",
@@ -189,115 +182,58 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
       <div style={{ paddingBottom: "100px" }}>
         {/* 安心ブロック: 新規投稿時のみ表示 */}
         {!isEditMode && (
-          <>
-            {/* 安心ブロック①: 孤独感解消（緑） */}
+          <div
+            style={{
+              background: "var(--card)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid var(--border)",
+              borderRadius: "16px",
+              padding: "14px 16px",
+              margin: "12px 18px 12px",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "11px",
+            }}
+          >
             <div
               style={{
-                background: "var(--card)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-                border: "1px solid var(--border)",
-                borderRadius: "16px",
-                padding: "14px 16px",
-                margin: "12px 18px 12px",
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                background: "var(--notice-well)",
+                border: "1px solid var(--red-border)",
                 display: "flex",
-                alignItems: "flex-start",
-                gap: "11px",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
               }}
             >
+              <Users size={15} color="var(--orange-lit)" strokeWidth={2} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  background: "rgba(126,200,138,0.12)",
-                  border: "1px solid rgba(126,200,138,0.35)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  color: "var(--text)",
+                  lineHeight: 1.5,
+                  marginBottom: "3px",
                 }}
               >
-                <Users size={15} color="#7ec88a" strokeWidth={2} />
+                足あとは残りません
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: "12.5px",
-                    fontWeight: 600,
-                    color: "var(--text)",
-                    lineHeight: 1.5,
-                    marginBottom: "3px",
-                  }}
-                >
-                  同じギター好きが <b>23人</b> いま探しています
-                </div>
-                <div
-                  style={{
-                    fontSize: "11px",
-                    color: "var(--text2)",
-                    lineHeight: 1.55,
-                  }}
-                >
-                  あなたの投稿を待っている仲間がいます。スマホで録ったものでOKです。
-                </div>
-              </div>
-            </div>
-
-            {/* 安心ブロック②: 公開範囲（琥珀） */}
-            <div
-              style={{
-                background: "var(--card)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-                border: "1px solid var(--border)",
-                borderRadius: "16px",
-                padding: "14px 16px",
-                margin: "0 18px 12px",
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "11px",
-              }}
-            >
               <div
                 style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  background: "rgba(232,140,90,0.12)",
-                  border: "1px solid rgba(232,140,90,0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
+                  fontSize: "11px",
+                  color: "var(--text2)",
+                  lineHeight: 1.55,
                 }}
               >
-                <Eye size={15} color="#e88c5a" strokeWidth={2} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: "12.5px",
-                    fontWeight: 600,
-                    color: "var(--text)",
-                    lineHeight: 1.5,
-                    marginBottom: "3px",
-                  }}
-                >
-                  公開範囲: <b>全員</b> ・ 足あとは残りません
-                </div>
-                <div
-                  style={{
-                    fontSize: "11px",
-                    color: "var(--text2)",
-                    lineHeight: 1.55,
-                  }}
-                >
-                  アプリ利用者なら誰でも聴けます。誰が聴いたかは表示されないので、安心して投稿できます。
-                </div>
+                アプリ利用者なら誰でも聴けます。誰が聴いたかは表示されないので、安心して投稿できます。
               </div>
             </div>
-          </>
+          </div>
         )}
 
         {/* 音源セクション */}
@@ -312,16 +248,15 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
         >
           <span
             style={{
-              fontSize: "11px",
+              fontSize: "14px",
               fontWeight: 700,
-              color: "var(--text2)",
-              letterSpacing: "0.3px",
+              color: "var(--red)",
             }}
           >
             音源
           </span>
           {!isEditMode && (
-            <span style={{ fontSize: "10px", color: "var(--red)", fontWeight: 700 }}>
+            <span style={{ fontSize: "11px", color: "var(--req)", fontWeight: 700 }}>
               必須・90秒/5MBまで
             </span>
           )}
@@ -370,15 +305,14 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
         >
           <span
             style={{
-              fontSize: "11px",
+              fontSize: "14px",
               fontWeight: 700,
-              color: "var(--text2)",
-              letterSpacing: "0.3px",
+              color: "var(--red)",
             }}
           >
             タイトル
           </span>
-          <span style={{ fontSize: "10px", color: "var(--red)", fontWeight: 700 }}>
+          <span style={{ fontSize: "11px", color: "var(--req)", fontWeight: 700 }}>
             必須・30字以内
           </span>
         </div>
@@ -442,15 +376,14 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
         >
           <span
             style={{
-              fontSize: "11px",
+              fontSize: "14px",
               fontWeight: 700,
-              color: "var(--text2)",
-              letterSpacing: "0.3px",
+              color: "var(--red)",
             }}
           >
             本文
           </span>
-          <span style={{ fontSize: "9px", color: "var(--text3)" }}>
+          <span style={{ fontSize: "11px", color: "var(--text3)" }}>
             任意・150字以内
           </span>
         </div>
@@ -515,144 +448,82 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
         >
           <span
             style={{
-              fontSize: "11px",
+              fontSize: "14px",
               fontWeight: 700,
-              color: "var(--text2)",
-              letterSpacing: "0.3px",
+              color: "var(--red)",
             }}
           >
             セッションアンサー希望
           </span>
-          <span style={{ fontSize: "10px", color: "var(--red)", fontWeight: 700 }}>
+          <span style={{ fontSize: "11px", color: "var(--req)", fontWeight: 700 }}>
             必須・1つ以上
           </span>
         </div>
-        <div
-          style={{
-            background: "var(--card)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid var(--border)",
-            borderRadius: "16px",
-            margin: "0 18px 20px",
-            padding: "0 16px",
-          }}
-        >
-          {(["instrument", "genre", "area"] as FilterKey[]).map((key, i) => {
+        <div style={{ margin: "0 18px 20px", display: "flex", flexDirection: "column", gap: "8px" }}>
+          {(["instrument", "genre", "area"] as FilterKey[]).map((key) => {
             const tags = postTags[key];
             return (
               <div
                 key={key}
                 style={{
-                  padding: "14px 0",
-                  borderBottom:
-                    i < 2 ? "1px solid var(--border)" : "none",
+                  minHeight: "77px",
+                  background: "var(--card)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "7px",
+                  padding: "10px 18px",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: tags.length > 0 ? "10px" : "0",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "var(--text)",
-                    }}
-                  >
+                {tags.length === 0 ? (
+                  <span style={{ fontSize: "14px", color: "var(--text3)" }}>
                     {TAG_LABELS[key]}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTagSheetKey(key);
-                      setTagSheetOpen(true);
-                    }}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      background: "var(--card2)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "12px",
-                      padding: "5px 11px",
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      color: "var(--text2)",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      transition: "all 0.18s",
-                    }}
-                  >
-                    <PlusIcon />
-                    追加
-                  </button>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "6px",
-                    minHeight: tags.length > 0 ? "26px" : "0",
-                  }}
-                >
-                  {tags.length === 0 ? (
+                ) : (
+                  tags.map((t) => (
                     <span
+                      key={t}
                       style={{
-                        fontSize: "11px",
-                        color: "var(--text3)",
-                        fontStyle: "italic",
+                        height: "37px",
+                        padding: "0 12px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        border: "1px solid var(--border-solid)",
+                        borderRadius: "10px",
+                        background: "var(--tag-solid)",
+                        color: "var(--text)",
+                        fontSize: "13px",
                       }}
                     >
-                      未選択
+                      {t}
                     </span>
-                  ) : (
-                    tags.map((t) => (
-                      <span
-                        key={t}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "5px",
-                          background: "var(--red-bg)",
-                          border: "1px solid var(--red-border)",
-                          borderRadius: "14px",
-                          padding: "4px 6px 4px 10px",
-                          fontSize: "11.5px",
-                          fontWeight: 600,
-                          color: "var(--red2)",
-                        }}
-                      >
-                        {t}
-                        <button
-                          type="button"
-                          onClick={() => removeTag(key, t)}
-                          aria-label={`${t}を削除`}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: "16px",
-                            height: "16px",
-                            borderRadius: "50%",
-                            background: "rgba(181,89,60,0.10)",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: 0,
-                            flexShrink: 0,
-                            transition: "background 0.15s",
-                          }}
-                        >
-                          <XSmallIcon />
-                        </button>
-                      </span>
-                    ))
-                  )}
-                </div>
+                  ))
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTagSheetKey(key);
+                    setTagSheetOpen(true);
+                  }}
+                  style={{
+                    marginLeft: "auto",
+                    flexShrink: 0,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    color: "var(--accent-muted)",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <PlusIcon />
+                  追加
+                </button>
               </div>
             );
           })}
@@ -699,23 +570,6 @@ function PlusIcon() {
     >
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function XSmallIcon() {
-  return (
-    <svg
-      width="8"
-      height="8"
-      viewBox="0 0 12 12"
-      fill="none"
-      stroke="var(--red2)"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-    >
-      <line x1="2" y1="2" x2="10" y2="10" />
-      <line x1="10" y1="2" x2="2" y2="10" />
     </svg>
   );
 }

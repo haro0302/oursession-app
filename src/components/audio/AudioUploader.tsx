@@ -215,46 +215,43 @@ export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved
   // ─── idle ───
   if (stage === "idle") return (
     <div>
-      {/* 録音ボタン: カード背景 + 赤枠 + 横並び */}
+      {/* 録音ボタン: 暖色カード + アイコンウェル + 横並び */}
       <button type="button" onClick={startCountdown} style={{
-        width: "100%", display: "flex", alignItems: "center", gap: "13px",
-        padding: "18px 16px",
-        background: "var(--card)", backdropFilter: "blur(20px)",
-        border: "1px solid var(--red-border)", borderRadius: "18px",
-        cursor: "pointer",
+        width: "100%", height: "82px", display: "flex", alignItems: "center", gap: "14px",
+        paddingLeft: "17px",
+        background: "var(--audio-card)",
+        border: "none", borderRadius: "16px",
+        cursor: "pointer", textAlign: "left",
       }}>
         <div style={{
           width: "44px", height: "44px", borderRadius: "50%",
-          background: "var(--red)", flexShrink: 0,
+          background: "var(--tag-solid)", flexShrink: 0,
           display: "flex", alignItems: "center", justifyContent: "center",
-          
         }}>
           <MicIcon />
         </div>
         <div style={{ flex: 1, textAlign: "left" }}>
-          <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", lineHeight: 1.4, marginBottom: "2px" }}>
+          <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--red2)", lineHeight: 1.4, marginBottom: "2px" }}>
             その場で録音する
           </div>
-          <div style={{ fontSize: "11px", color: "var(--text2)", lineHeight: 1.5 }}>
+          <div style={{ fontSize: "13px", color: "var(--accent-muted)", lineHeight: 1.5 }}>
             スマホのマイクで90秒まで
           </div>
         </div>
       </button>
 
       {/* セパレータ */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "14px 0" }}>
-        <div style={{ flex: 1, height: "1px", background: "var(--border2)" }} />
-        <span style={{ fontSize: "12px", color: "var(--text3)" }}>または</span>
-        <div style={{ flex: 1, height: "1px", background: "var(--border2)" }} />
+      <div style={{ textAlign: "center", fontSize: "13px", color: "var(--accent-muted)", margin: "14.5px 0" }}>
+        または
       </div>
 
-      {/* ファイル選択: 破線囲み・縦並び・中央寄せ */}
-      <label style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", padding: "28px 18px", background: "var(--card)", backdropFilter: "blur(20px)", border: "1.5px dashed var(--border2)", borderRadius: "16px", cursor: "pointer", textAlign: "center" }}>
-        <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "var(--red-bg)", border: "1px solid var(--red-border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {/* ファイル選択: 縦並び・中央寄せ */}
+      <label style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", padding: "28.5px 0", background: "var(--audio-card)", border: "none", borderRadius: "16px", cursor: "pointer", textAlign: "center" }}>
+        <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "var(--tag-solid)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <UploadIcon />
         </div>
-        <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)" }}>ファイルから選ぶ</div>
-        <div style={{ fontSize: "11px", color: "var(--text3)" }}>MP3 (90秒・5MBまで)</div>
+        <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--red2)" }}>ファイルから選ぶ</div>
+        <div style={{ fontSize: "13px", color: "var(--accent-muted)" }}>MP3 (90秒・5MBまで)</div>
         <input type="file" accept="audio/mpeg,.mp3" onChange={handleFileSelect} style={{ display: "none" }} />
       </label>
     </div>
@@ -423,7 +420,7 @@ export default function AudioUploader({ userId, sessionId, onUploaded, onRemoved
 
 function MicIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red2)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
       <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
       <line x1="12" y1="19" x2="12" y2="23" />

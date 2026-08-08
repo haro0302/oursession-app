@@ -23,4 +23,7 @@ export const colors = {
   onAccent: "#101010",
   tagSolid: "#161618",
   orangeLit: "#E08A5A",
+  audioCard: "#251a16",
+  noticeWell: "#2e1e19",
+  req: "#8f2a38",
 } as const;
