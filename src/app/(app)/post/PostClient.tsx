@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Users } from "lucide-react";
 import AudioUploader from "@/components/audio/AudioUploader";
@@ -54,6 +54,16 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
   const [submitting, setSubmitting] = useState(false);
   const [titleFocused, setTitleFocused] = useState(false);
   const [bodyFocused, setBodyFocused] = useState(false);
+  const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  function resizeBodyTextarea() {
+    const el = bodyTextareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  useEffect(() => { resizeBodyTextarea(); }, []);
 
   const hasAnyTag =
     postTags.instrument.length > 0 ||
@@ -402,8 +412,9 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
           }}
         >
           <textarea
+            ref={bodyTextareaRef}
             value={body}
-            onChange={(e) => setBody(e.target.value.slice(0, 300))}
+            onChange={(e) => { setBody(e.target.value.slice(0, 300)); resizeBodyTextarea(); }}
             onFocus={() => setBodyFocused(true)}
             onBlur={() => setBodyFocused(false)}
             placeholder="どんなセッションがしたいか、どんな人を探しているかを書いてみよう。"
@@ -418,6 +429,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
               lineHeight: 1.6,
               minHeight: "90px",
               resize: "none",
+              overflow: "hidden",
               paddingBottom: "12px",
               WebkitAppearance: "none",
             }}
