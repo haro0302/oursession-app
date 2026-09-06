@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase-server";
 import ChatRoom from "@/components/chat/ChatRoom";
-import type { AssistAnswerValue, Database, ScheduleAnswerValue, ScheduleCandidate, StudioProposal } from "@/types/database";
+import type { AssistAnswerValue, Database, ScheduleAnswerValue, ScheduleCandidate, StudioProposal, Song } from "@/types/database";
 
 type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
+type SessionRow = Database["public"]["Tables"]["sessions"]["Row"] & { song: Song };
 type AnswerRow = Database["public"]["Tables"]["answers"]["Row"];
 type AssistAnswerRow = Database["public"]["Tables"]["session_assist_answers"]["Row"];
 type SchedulePollRow = Database["public"]["Tables"]["schedule_polls"]["Row"];
@@ -44,11 +44,11 @@ export default async function ChatPage({
 
   const { data: sessionRaw } = await supabase
     .from("sessions")
-    .select("*")
+    .select("*, song:songs(*)")
     .eq("id", answer.session_id)
     .single();
 
-  const session = sessionRaw as SessionRow | null;
+  const session = sessionRaw as unknown as SessionRow | null;
   if (!session) redirect("/messages");
 
   const isAuthor = session.author_id === currentUserId;
@@ -150,7 +150,7 @@ export default async function ChatPage({
   return (
     <ChatRoom
       answerId={answerId}
-      sessionTitle={session.title}
+      sessionTitle={session.song.title}
       sessionAudioUrl={session.audio_url}
       sessionAuthorNickname={authorNickname}
       partnerNickname={partnerProfile?.nickname ?? ""}

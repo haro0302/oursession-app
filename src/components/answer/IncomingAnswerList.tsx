@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import Avatar from "@/components/ui/Avatar";
-import PracticeBadge from "@/components/ui/PracticeBadge";
 import { updateAnswerStatus, insertMessage } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import type { AnswerWithContext } from "@/components/notifications/NotificationsView";
@@ -52,17 +51,16 @@ export default function IncomingAnswerList({ answers: initial, currentUserId }: 
                 src={answer.sender.avatar_url}
                 alt={answer.sender.nickname}
                 size="sm"
-                isPractice={answer.sender.is_practice ?? false}
+                isPractice={false}
               />
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                   <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>
                     {answer.sender.nickname}
                   </span>
-                  {answer.sender.is_practice && <PracticeBadge mini />}
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--text3)", marginTop: "1px" }}>
-                  ↳ {answer.session.title}
+                  ↳ {answer.session.song.title}
                 </div>
               </div>
             </div>

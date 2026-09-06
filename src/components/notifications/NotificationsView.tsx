@@ -5,11 +5,10 @@ import type { Database } from "@/types/database";
 
 type AnswerRow = Database["public"]["Tables"]["answers"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 
 export type AnswerWithContext = AnswerRow & {
   sender: ProfileRow;
-  session: Pick<SessionRow, "id" | "title">;
+  session: { id: string; song: { title: string } };
 };
 
 export type ActiveChat = {
@@ -17,7 +16,6 @@ export type ActiveChat = {
   sessionTitle: string;
   partnerNickname: string;
   partnerAvatarUrl: string | null;
-  partnerIsPractice: boolean;
 };
 
 interface Props {
@@ -74,7 +72,7 @@ export default function NotificationsView({ pendingAnswers, activeChats, current
                   src={chat.partnerAvatarUrl}
                   alt={chat.partnerNickname}
                   size="md"
-                  isPractice={chat.partnerIsPractice}
+                  isPractice={false}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

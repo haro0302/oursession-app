@@ -3,7 +3,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import MessagesClient from "./MessagesClient";
 import type { Database } from "@/types/database";
 
-type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
+type SessionRow = { id: string; created_at: string; song: { title: string } };
 type AnswerRow = Database["public"]["Tables"]["answers"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -14,7 +14,6 @@ export type MsgRow = {
   partnerNickname: string;
   partnerUserId: string;
   partnerAvatarUrl: string | null;
-  partnerIsPractice: boolean;
   role: "host" | "guest" | "pending";
   previewText: string;
   previewState: "alert" | "pending" | "normal" | "empty";
@@ -33,19 +32,19 @@ export default async function MessagesPage() {
   // 自分のプロフィール（アンサーがまだ無いセッション行のアバター用）
   const { data: myProfileRaw } = await supabase
     .from("profiles")
-    .select("nickname, avatar_url, is_practice")
+    .select("nickname, avatar_url")
     .eq("id", currentUserId)
     .maybeSingle();
-  const myProfile = myProfileRaw as Pick<ProfileRow, "nickname" | "avatar_url" | "is_practice"> | null;
+  const myProfile = myProfileRaw as Pick<ProfileRow, "nickname" | "avatar_url"> | null;
 
   // ── ホスト行: 自分が投稿したセッションに届いた「1アンサー = 1ルーム」 ──────
   const { data: mySessionsRaw } = await supabase
     .from("sessions")
-    .select("id, title, created_at")
+    .select("id, created_at, song:songs(title)")
     .eq("author_id", currentUserId)
     .order("created_at", { ascending: false });
 
-  const mySessions = (mySessionsRaw as Pick<SessionRow, "id" | "title" | "created_at">[] | null) ?? [];
+  const mySessions = (mySessionsRaw as unknown as SessionRow[] | null) ?? [];
   const mySessionIds = mySessions.map((s) => s.id);
   const mySessionMap = new Map(mySessions.map((s) => [s.id, s]));
 
@@ -84,11 +83,10 @@ export default async function MessagesPage() {
       rows.push({
         roomId: answer.id,
         sessionId: session.id,
-        sessionTitle: session.title,
+        sessionTitle: session.song.title,
         partnerNickname: sender.nickname,
         partnerUserId: sender.id,
         partnerAvatarUrl: sender.avatar_url,
-        partnerIsPractice: sender.is_practice ?? false,
         role: "host",
         previewText: isPending ? "新しいアンサーが届きました" : "チャット進行中",
         previewState: isPending ? "alert" : "normal",
@@ -103,11 +101,10 @@ export default async function MessagesPage() {
       rows.push({
         roomId: null,
         sessionId: session.id,
-        sessionTitle: session.title,
+        sessionTitle: session.song.title,
         partnerNickname: myProfile?.nickname ?? "あなた",
         partnerUserId: currentUserId,
         partnerAvatarUrl: myProfile?.avatar_url ?? null,
-        partnerIsPractice: myProfile?.is_practice ?? false,
         role: "host",
         previewText: "セッションアンサーはまだいません",
         previewState: "empty",
@@ -135,20 +132,20 @@ export default async function MessagesPage() {
 
     const { data: guestSessionsRaw } = await supabase
       .from("sessions")
-      .select("id, title, author_id, created_at")
+      .select("id, author_id, created_at, song:songs(title)")
       .in("id", guestSessionIds);
 
-    const guestSessions = (guestSessionsRaw as Pick<SessionRow, "id" | "title" | "author_id" | "created_at">[] | null) ?? [];
+    const guestSessions = (guestSessionsRaw as unknown as (SessionRow & { author_id: string })[] | null) ?? [];
     const authorIds = [...new Set(guestSessions.map((s) => s.author_id))];
 
     let authorMap = new Map<string, ProfileRow>();
     if (authorIds.length > 0) {
       const { data: authorsRaw } = await supabase
         .from("profiles")
-        .select("id, nickname, avatar_url, is_practice")
+        .select("id, nickname, avatar_url")
         .in("id", authorIds);
       authorMap = new Map(
-        ((authorsRaw as Pick<ProfileRow, "id" | "nickname" | "avatar_url" | "is_practice">[] | null) ?? []).map(
+        ((authorsRaw as Pick<ProfileRow, "id" | "nickname" | "avatar_url">[] | null) ?? []).map(
           (p) => [p.id, p as ProfileRow]
         )
       );
@@ -167,11 +164,10 @@ export default async function MessagesPage() {
       rows.push({
         roomId: answer.id,
         sessionId: session.id,
-        sessionTitle: session.title,
+        sessionTitle: session.song.title,
         partnerNickname: author.nickname,
         partnerUserId: author.id,
         partnerAvatarUrl: author.avatar_url,
-        partnerIsPractice: author.is_practice,
         role,
         previewText: role === "pending" ? "↳ アンサー送信済み · 承認待ち" : "チャット中",
         previewState: role === "pending" ? "pending" : "normal",

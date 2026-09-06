@@ -18,7 +18,6 @@ export interface Database {
           instruments: string[];
           genres: string[];
           favorite_artists: string[];
-          favorite_tracks: string[];
           bio: string | null;
           avatar_url: string | null;
           sns_links: Json;
@@ -34,7 +33,6 @@ export interface Database {
           instruments?: string[];
           genres?: string[];
           favorite_artists?: string[];
-          favorite_tracks?: string[];
           bio?: string | null;
           avatar_url?: string | null;
           sns_links?: Json;
@@ -50,7 +48,6 @@ export interface Database {
           instruments?: string[];
           genres?: string[];
           favorite_artists?: string[];
-          favorite_tracks?: string[];
           bio?: string | null;
           avatar_url?: string | null;
           sns_links?: Json;
@@ -63,32 +60,38 @@ export interface Database {
         Row: {
           id: string;
           author_id: string;
-          title: string;
+          song_id: string;
+          requested_part: string;
+          area: string;
+          genre: string;
           body: string | null;
           audio_url: string;
           waveform_peaks: number[] | null;
-          is_practice: boolean;
-          tags: string[];
+          wip: boolean;
           created_at: string;
         };
         Insert: {
           id?: string;
           author_id: string;
-          title: string;
+          song_id: string;
+          requested_part: string;
+          area: string;
+          genre: string;
           body?: string | null;
           audio_url: string;
           waveform_peaks?: number[] | null;
-          is_practice?: boolean;
-          tags?: string[];
+          wip?: boolean;
           created_at?: string;
         };
         Update: {
-          title?: string;
+          song_id?: string;
+          requested_part?: string;
+          area?: string;
+          genre?: string;
           body?: string | null;
           audio_url?: string;
           waveform_peaks?: number[] | null;
-          is_practice?: boolean;
-          tags?: string[];
+          wip?: boolean;
         };
         Relationships: [
           {
@@ -96,6 +99,62 @@ export interface Database {
             columns: ["author_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "sessions_song_id_fkey";
+            columns: ["song_id"];
+            isOneToOne: false;
+            referencedRelation: "songs";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      songs: {
+        Row: {
+          id: string;
+          title: string;
+          artist: string | null;
+          apple_track_id: number | null;
+          is_original: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          artist?: string | null;
+          apple_track_id?: number | null;
+          is_original?: boolean;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      profile_want_songs: {
+        Row: {
+          profile_id: string;
+          song_id: string;
+          created_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          song_id: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [
+          {
+            foreignKeyName: "profile_want_songs_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_want_songs_song_id_fkey";
+            columns: ["song_id"];
+            isOneToOne: false;
+            referencedRelation: "songs";
             referencedColumns: ["id"];
           }
         ];
@@ -450,6 +509,8 @@ export interface Database {
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Session = Database["public"]["Tables"]["sessions"]["Row"];
+export type Song = Database["public"]["Tables"]["songs"]["Row"];
+export type ProfileWantSong = Database["public"]["Tables"]["profile_want_songs"]["Row"];
 export type Answer = Database["public"]["Tables"]["answers"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type Save = Database["public"]["Tables"]["saves"]["Row"];

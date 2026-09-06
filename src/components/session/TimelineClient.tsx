@@ -26,9 +26,9 @@ export default function TimelineClient({ sessions, savedIds, answeredIds, curren
   const [searchOpen, setSearchOpen] = useState(false);
 
   const filteredSessions = sessions.filter((session) => {
-    if (filterState.instrument.length > 0 && !filterState.instrument.some((i) => session.tags.includes(i))) return false;
-    if (filterState.genre.length > 0 && !filterState.genre.some((g) => session.tags.includes(g))) return false;
-    if (filterState.area.length > 0 && !filterState.area.some((a) => session.author.area === a)) return false;
+    if (filterState.instrument.length > 0 && !filterState.instrument.includes(session.requested_part)) return false;
+    if (filterState.genre.length > 0 && !filterState.genre.includes(session.genre)) return false;
+    if (filterState.area.length > 0 && !filterState.area.includes(session.area)) return false;
     return true;
   });
 

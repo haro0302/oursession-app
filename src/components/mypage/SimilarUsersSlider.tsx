@@ -67,7 +67,7 @@ export default function SimilarUsersSlider({ users }: Props) {
             src={user.avatar_url}
             alt={user.nickname ?? ""}
             size="lg"
-            isPractice={user.is_practice ?? false}
+            isPractice={false}
           />
 
           {/* ニックネーム */}

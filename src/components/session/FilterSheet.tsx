@@ -15,7 +15,7 @@ interface Props {
 
 const FILTER_OPTIONS: Record<FilterKey, { title: string; options: string[] }> = {
   instrument: {
-    title: "希望アンサー",
+    title: "募集パート",
     options: ["ボーカル", "ギター", "ベース", "ドラム", "ピアノ", "キーボード", "ウクレレ", "サックス", "トランペット", "バイオリン", "和楽器", "DTM", "その他"],
   },
   genre: {

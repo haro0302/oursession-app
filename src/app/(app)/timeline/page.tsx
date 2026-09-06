@@ -1,9 +1,9 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import TimelineClient from "@/components/session/TimelineClient";
 import type { SessionWithAuthor } from "@/lib/db";
-import type { Database } from "@/types/database";
+import type { Database, Song } from "@/types/database";
 
-type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
+type SessionRow = Database["public"]["Tables"]["sessions"]["Row"] & { song: Song };
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 export default async function TimelinePage({
@@ -20,11 +20,11 @@ export default async function TimelinePage({
   // sessions と profiles を別クエリで取得して結合
   const { data: sessionsRaw } = await supabase
     .from("sessions")
-    .select("*")
+    .select("*, song:songs(*)")
     .order("created_at", { ascending: false })
     .limit(30);
 
-  const rawSessions = (sessionsRaw as SessionRow[] | null) ?? [];
+  const rawSessions = (sessionsRaw as unknown as SessionRow[] | null) ?? [];
 
   const authorIds = [...new Set(rawSessions.map((s) => s.author_id))];
   let profileMap = new Map<string, ProfileRow>();

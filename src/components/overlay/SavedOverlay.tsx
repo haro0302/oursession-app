@@ -7,9 +7,9 @@ import { addSave, removeSave } from "@/lib/db";
 import SessionCard from "@/components/session/SessionCard";
 import { useBlockStore } from "@/store/blockStore";
 import type { SessionWithAuthor } from "@/lib/db";
-import type { Database } from "@/types/database";
+import type { Database, Song } from "@/types/database";
 
-type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
+type SessionRow = Database["public"]["Tables"]["sessions"]["Row"] & { song: Song };
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 interface Props {
@@ -46,10 +46,10 @@ export default function SavedOverlay({ open, onClose, currentUserId }: Props) {
 
       const { data: sessionsRaw } = await supabase
         .from("sessions")
-        .select("*")
+        .select("*, song:songs(*)")
         .in("id", ids)
         .order("created_at", { ascending: false });
-      const rawSessions = (sessionsRaw as SessionRow[] | null) ?? [];
+      const rawSessions = (sessionsRaw as unknown as SessionRow[] | null) ?? [];
 
       const authorIds = [...new Set(rawSessions.map((s) => s.author_id))];
       const { data: profilesRaw } = await supabase

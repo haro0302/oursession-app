@@ -6,53 +6,46 @@ import { Users } from "lucide-react";
 import AudioUploader from "@/components/audio/AudioUploader";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import FilterSheet from "@/components/session/FilterSheet";
-import { insertSession, updateSession } from "@/lib/db";
+import SongPickerInput, { type SongPickerValue } from "@/components/session/SongPickerInput";
+import { insertSession, updateSession, findOrCreateSong } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import type { Session } from "@/types/database";
+import type { Session, Song } from "@/types/database";
 
 type FilterKey = "instrument" | "genre" | "area";
 
-const INSTRUMENT_SET = new Set([
-  "ボーカル", "ギター", "ベース", "ドラム", "ピアノ", "キーボード", "ウクレレ",
-  "サックス", "トランペット", "バイオリン", "和楽器", "DTM", "その他",
-]);
-const GENRE_SET = new Set([
-  "ロック", "ポップ", "ボカロ", "フォーク", "ジャズ", "ファンク",
-  "R&B", "ブルース", "カントリー", "メタル", "アニソン", "ラップ",
-]);
-
-function parseSessionTags(tags: string[]): Record<FilterKey, string[]> {
-  const result: Record<FilterKey, string[]> = { instrument: [], genre: [], area: [] };
-  for (const tag of tags) {
-    if (INSTRUMENT_SET.has(tag)) result.instrument.push(tag);
-    else if (GENRE_SET.has(tag)) result.genre.push(tag);
-    else result.area.push(tag);
-  }
-  return result;
-}
-
 interface Props {
   userId: string;
-  isPracticeDefault: boolean;
-  editSession?: Session | null;
+  editSession?: (Session & { song: Song }) | null;
 }
 
-export default function PostClient({ userId, isPracticeDefault, editSession }: Props) {
+const BODY_PLACEHOLDER =
+  "平日は21時以降、土日は昼から動けます。\nまだ人と合わせた経験が少ないので、ゆっくり進めてもらえると助かります。";
+
+export default function PostClient({ userId, editSession }: Props) {
   const router = useRouter();
   const isEditMode = !!editSession;
   const sessionId = useRef(editSession?.id ?? crypto.randomUUID()).current;
 
   const [audioUrl, setAudioUrl] = useState<string | null>(editSession?.audio_url ?? null);
   const [waveformPeaks, setWaveformPeaks] = useState<number[] | null>(editSession?.waveform_peaks ?? null);
-  const [title, setTitle] = useState(editSession?.title ?? "");
-  const [body, setBody] = useState(editSession?.body ?? "");
-  const [postTags, setPostTags] = useState<Record<FilterKey, string[]>>(
-    () => editSession ? parseSessionTags(editSession.tags) : { instrument: [], genre: [], area: [] }
+  const [song, setSong] = useState<SongPickerValue | null>(
+    editSession
+      ? {
+          title: editSession.song.title,
+          artist: editSession.song.artist,
+          appleTrackId: editSession.song.apple_track_id,
+          isOriginal: editSession.song.is_original,
+        }
+      : null
   );
+  const [body, setBody] = useState(editSession?.body ?? "");
+  const [part, setPart] = useState(editSession?.requested_part ?? "");
+  const [area, setArea] = useState(editSession?.area ?? "");
+  const [genre, setGenre] = useState(editSession?.genre ?? "");
+  const [wip, setWip] = useState(editSession?.wip ?? false);
   const [tagSheetOpen, setTagSheetOpen] = useState(false);
   const [tagSheetKey, setTagSheetKey] = useState<FilterKey | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [titleFocused, setTitleFocused] = useState(false);
   const [bodyFocused, setBodyFocused] = useState(false);
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -65,18 +58,15 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
 
   useEffect(() => { resizeBodyTextarea(); }, []);
 
-  const hasAnyTag =
-    postTags.instrument.length > 0 ||
-    postTags.genre.length > 0 ||
-    postTags.area.length > 0;
+  const hasAllConditions = !!part && !!area && !!genre;
 
   const isDirty = isEditMode
     ? true
-    : (!!audioUrl || title.length > 0 || body.length > 0 || hasAnyTag);
+    : (!!audioUrl || !!song || body.length > 0 || hasAllConditions);
 
   const canPublish = isEditMode
-    ? (title.trim().length > 0 && title.length <= 30 && body.length <= 150 && hasAnyTag && !submitting)
-    : (!!audioUrl && title.trim().length > 0 && title.length <= 30 && body.length <= 150 && hasAnyTag && !submitting);
+    ? (!!song && hasAllConditions && body.length <= 150 && !submitting)
+    : (!!audioUrl && !!song && hasAllConditions && body.length <= 150 && !submitting);
 
   function handleCancel() {
     if (isDirty) {
@@ -86,17 +76,25 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
   }
 
   async function handlePublish() {
-    if (!canPublish) return;
+    if (!canPublish || !song) return;
     setSubmitting(true);
 
-    const tags = [...postTags.instrument, ...postTags.genre, ...postTags.area];
-
     try {
+      const songId = await findOrCreateSong({
+        title: song.title,
+        artist: song.artist,
+        appleTrackId: song.appleTrackId,
+        isOriginal: song.isOriginal,
+      });
+
       if (isEditMode && editSession) {
         await updateSession(editSession.id, userId, {
-          title: title.trim(),
+          song_id: songId,
+          requested_part: part,
+          area,
+          genre,
+          wip,
           body: body.trim() || null,
-          tags,
         });
         showToast("セッションを更新しました");
         router.push("/mypage");
@@ -106,12 +104,14 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
         await insertSession({
           id: sessionId,
           author_id: userId,
-          title: title.trim(),
+          song_id: songId,
+          requested_part: part,
+          area,
+          genre,
           body: body.trim() || null,
           audio_url: audioUrl,
           waveform_peaks: waveformPeaks,
-          is_practice: isPracticeDefault,
-          tags,
+          wip,
         });
         showToast("あなたの音、届きました🎵\n仲間が見つかったらお知らせします。");
         router.push("/timeline");
@@ -123,10 +123,17 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
     }
   }
 
-  const TAG_LABELS: Record<FilterKey, string> = {
-    instrument: "楽器",
+  const CONDITION_LABELS: Record<FilterKey, string> = {
+    instrument: "募集パート",
     genre: "ジャンル",
     area: "エリア",
+  };
+
+  const CONDITION_VALUE: Record<FilterKey, string> = { instrument: part, genre, area };
+  const CONDITION_SETTER: Record<FilterKey, (v: string) => void> = {
+    instrument: setPart,
+    genre: setGenre,
+    area: setArea,
   };
 
   return (
@@ -179,7 +186,6 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
             padding: "7px 18px",
             borderRadius: "16px",
             cursor: canPublish ? "pointer" : "not-allowed",
-            
             transition: "all 0.18s",
             fontFamily: "inherit",
           }}
@@ -256,15 +262,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
             margin: "18px 0 8px",
           }}
         >
-          <span
-            style={{
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "var(--red)",
-            }}
-          >
-            音源
-          </span>
+          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--red)" }}>音源</span>
           {!isEditMode && (
             <span style={{ fontSize: "11px", color: "var(--req)", fontWeight: 700 }}>
               必須・90秒/5MBまで
@@ -282,14 +280,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
               }}
             >
               <AudioPlayer src={editSession.audio_url} peaks={editSession.waveform_peaks} />
-              <div
-                style={{
-                  fontSize: "11px",
-                  color: "var(--text3)",
-                  textAlign: "center",
-                  marginTop: "10px",
-                }}
-              >
+              <div style={{ fontSize: "11px", color: "var(--text3)", textAlign: "center", marginTop: "10px" }}>
                 音源は変更できません
               </div>
             </div>
@@ -303,7 +294,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
           )}
         </div>
 
-        {/* タイトル */}
+        {/* 曲 */}
         <div
           style={{
             display: "flex",
@@ -313,66 +304,68 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
             margin: "18px 0 8px",
           }}
         >
-          <span
-            style={{
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "var(--red)",
-            }}
-          >
-            タイトル
-          </span>
-          <span style={{ fontSize: "11px", color: "var(--req)", fontWeight: 700 }}>
-            必須・30字以内
-          </span>
+          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--red)" }}>曲</span>
+          <span style={{ fontSize: "11px", color: "var(--req)", fontWeight: 700 }}>必須</span>
         </div>
-        <div
+        <div style={{ marginBottom: "20px" }}>
+          <SongPickerInput value={song} onChange={setSong} />
+        </div>
+
+        {/* まだ練習中 */}
+        <button
+          type="button"
+          onClick={() => setWip((w) => !w)}
+          aria-pressed={wip ? "true" : "false"}
           style={{
-            position: "relative",
-            margin: "0 18px",
+            margin: "0 18px 20px",
+            width: "calc(100% - 36px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
             background: "var(--card)",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
-            border: `1px solid ${titleFocused ? "var(--red-border)" : "var(--border)"}`,
+            border: "1px solid var(--border)",
             borderRadius: "14px",
             padding: "13px 16px",
-            transition: "border-color 0.18s",
-            marginBottom: "20px",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            textAlign: "left",
           }}
         >
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value.slice(0, 60))}
-            onFocus={() => setTitleFocused(true)}
-            onBlur={() => setTitleFocused(false)}
-            placeholder="例: 山下達郎「Sparkle」コピー"
-            style={{
-              width: "100%",
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              color: "var(--text)",
-              fontFamily: "inherit",
-              fontSize: "15px",
-              fontWeight: 500,
-              paddingRight: "50px",
-              WebkitAppearance: "none",
-            }}
-          />
+          <div>
+            <div style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--text)" }}>まだ練習中</div>
+            <div style={{ marginTop: "2px", fontSize: "11.5px", color: "var(--text3)" }}>
+              この曲はまだ仕上がっていない場合、任意でオンにできます
+            </div>
+          </div>
           <div
             style={{
-              position: "absolute",
-              bottom: "6px",
-              right: "12px",
-              fontSize: "10px",
-              color: title.length > 30 ? "var(--red)" : "var(--text3)",
-              fontWeight: 500,
+              flexShrink: 0,
+              width: "40px",
+              height: "23px",
+              borderRadius: "12px",
+              background: wip ? "var(--red)" : "var(--card2)",
+              border: `1px solid ${wip ? "var(--red)" : "var(--border2)"}`,
+              position: "relative",
+              transition: "background 0.18s",
             }}
           >
-            {title.length} / 30
+            <div
+              style={{
+                position: "absolute",
+                top: "2px",
+                left: wip ? "19px" : "2px",
+                width: "17px",
+                height: "17px",
+                borderRadius: "50%",
+                background: "white",
+                transition: "left 0.18s",
+              }}
+            />
           </div>
-        </div>
+        </button>
 
         {/* 本文 */}
         <div
@@ -384,18 +377,8 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
             margin: "0 0 8px",
           }}
         >
-          <span
-            style={{
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "var(--red)",
-            }}
-          >
-            本文
-          </span>
-          <span style={{ fontSize: "11px", color: "var(--text3)" }}>
-            任意・150字以内
-          </span>
+          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--red)" }}>本文</span>
+          <span style={{ fontSize: "11px", color: "var(--text3)" }}>任意・150字以内</span>
         </div>
         <div
           style={{
@@ -417,7 +400,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
             onChange={(e) => { setBody(e.target.value.slice(0, 300)); resizeBodyTextarea(); }}
             onFocus={() => setBodyFocused(true)}
             onBlur={() => setBodyFocused(false)}
-            placeholder="どんなセッションがしたいか、どんな人を探しているかを書いてみよう。"
+            placeholder={BODY_PLACEHOLDER}
             style={{
               width: "100%",
               background: "transparent",
@@ -448,7 +431,7 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
           </div>
         </div>
 
-        {/* タグセクション */}
+        {/* 募集条件（単一選択） */}
         <div
           style={{
             display: "flex",
@@ -458,27 +441,19 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
             margin: "0 0 8px",
           }}
         >
-          <span
-            style={{
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "var(--red)",
-            }}
-          >
-            セッションアンサー希望
-          </span>
-          <span style={{ fontSize: "11px", color: "var(--req)", fontWeight: 700 }}>
-            必須・1つ以上
-          </span>
+          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--red)" }}>募集条件</span>
+          <span style={{ fontSize: "11px", color: "var(--req)", fontWeight: 700 }}>必須</span>
         </div>
         <div style={{ margin: "0 18px 20px", display: "flex", flexDirection: "column", gap: "8px" }}>
           {(["instrument", "genre", "area"] as FilterKey[]).map((key) => {
-            const tags = postTags[key];
+            const selected = CONDITION_VALUE[key];
             return (
-              <div
+              <button
                 key={key}
+                type="button"
+                onClick={() => { setTagSheetKey(key); setTagSheetOpen(true); }}
                 style={{
-                  minHeight: "77px",
+                  minHeight: "56px",
                   background: "var(--card)",
                   backdropFilter: "blur(20px)",
                   WebkitBackdropFilter: "blur(20px)",
@@ -486,102 +461,58 @@ export default function PostClient({ userId, isPracticeDefault, editSession }: P
                   borderRadius: "12px",
                   display: "flex",
                   alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "7px",
+                  justifyContent: "space-between",
+                  gap: "10px",
                   padding: "10px 18px",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  textAlign: "left",
                 }}
               >
-                {tags.length === 0 ? (
-                  <span style={{ fontSize: "14px", color: "var(--text3)" }}>
-                    {TAG_LABELS[key]}
+                <span style={{ fontSize: "12px", color: "var(--text3)", flexShrink: 0 }}>
+                  {CONDITION_LABELS[key]}
+                </span>
+                {selected ? (
+                  <span
+                    style={{
+                      flex: 1,
+                      textAlign: "right",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      color: "var(--text)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {selected}
                   </span>
                 ) : (
-                  tags.map((t) => (
-                    <span
-                      key={t}
-                      style={{
-                        height: "37px",
-                        padding: "0 12px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        border: "1px solid var(--border-solid)",
-                        borderRadius: "10px",
-                        background: "var(--tag-solid)",
-                        color: "var(--text)",
-                        fontSize: "13px",
-                      }}
-                    >
-                      {t}
-                    </span>
-                  ))
+                  <span style={{ flex: 1, textAlign: "right", fontSize: "13px", color: "var(--accent-muted)" }}>
+                    選択してください ›
+                  </span>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTagSheetKey(key);
-                    setTagSheetOpen(true);
-                  }}
-                  style={{
-                    marginLeft: "auto",
-                    flexShrink: 0,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    color: "var(--accent-muted)",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  <PlusIcon />
-                  追加
-                </button>
-              </div>
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* FilterSheet (always in DOM for animation) */}
+      {/* FilterSheet (単一選択: 選ぶと置き換わる) */}
       <FilterSheet
         open={tagSheetOpen}
         filterKey={tagSheetKey}
-        selected={tagSheetKey ? postTags[tagSheetKey] : []}
+        selected={tagSheetKey ? [CONDITION_VALUE[tagSheetKey]].filter(Boolean) : []}
         onToggle={(opt) => {
           if (!tagSheetKey) return;
-          setPostTags((prev) => {
-            const arr = prev[tagSheetKey];
-            return {
-              ...prev,
-              [tagSheetKey]: arr.includes(opt)
-                ? arr.filter((x) => x !== opt)
-                : [...arr, opt],
-            };
-          });
+          const setter = CONDITION_SETTER[tagSheetKey];
+          setter(CONDITION_VALUE[tagSheetKey] === opt ? "" : opt);
         }}
         onClear={() => {
-          if (tagSheetKey)
-            setPostTags((prev) => ({ ...prev, [tagSheetKey]: [] }));
+          if (tagSheetKey) CONDITION_SETTER[tagSheetKey]("");
         }}
         onClose={() => setTagSheetOpen(false)}
       />
     </>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg
-      width="11"
-      height="11"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-    >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
   );
 }

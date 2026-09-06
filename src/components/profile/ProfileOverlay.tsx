@@ -4,20 +4,18 @@ import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, MoreHorizontal, ExternalLink } from "lucide-react";
 import { normalizeUsername, soundcloudHref } from "@/lib/sns";
 import { createClient } from "@/lib/supabase";
-import PracticeBadge from "@/components/ui/PracticeBadge";
-import AudioPlayer from "@/components/ui/AudioPlayer";
 import ReportDrawer from "@/components/report/ReportDrawer";
 import BlockConfirmDrawer from "@/components/report/BlockConfirmDrawer";
 import AnswerDrawer from "@/components/answer/AnswerDrawer";
 import SessionCard from "@/components/session/SessionCard";
-import { addSave, removeSave, removeBlock } from "@/lib/db";
+import { addSave, removeSave, removeBlock, getWantSongs } from "@/lib/db";
 import { openAuthGate } from "@/lib/auth-gate";
 import { useBlockStore } from "@/store/blockStore";
 import type { SessionWithAuthor } from "@/lib/db";
-import type { Database } from "@/types/database";
+import type { Database, Song } from "@/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-type Session = Database["public"]["Tables"]["sessions"]["Row"];
+type Session = Database["public"]["Tables"]["sessions"]["Row"] & { song: Song };
 
 interface Props {
   userId: string | null;
@@ -40,6 +38,7 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
   const [unblocking, setUnblocking] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [wantSongs, setWantSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -67,20 +66,22 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
     const supabase = createClient();
     Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-      supabase.from("sessions").select("*").eq("author_id", userId).order("created_at", { ascending: false }),
+      supabase.from("sessions").select("*, song:songs(*)").eq("author_id", userId).order("created_at", { ascending: false }),
       currentUserId
         ? supabase.from("saves").select("session_id").eq("user_id", currentUserId)
         : Promise.resolve({ data: [] }),
       currentUserId
         ? supabase.from("answers").select("session_id").eq("sender_id", currentUserId)
         : Promise.resolve({ data: [] }),
-    ]).then(([profileRes, sessionsRes, savesRes, answersRes]) => {
+      getWantSongs(userId),
+    ]).then(([profileRes, sessionsRes, savesRes, answersRes, wantSongsRes]) => {
       setProfile((profileRes.data as Profile | null) ?? null);
-      setSessions((sessionsRes.data as Session[] | null) ?? []);
+      setSessions((sessionsRes.data as unknown as Session[] | null) ?? []);
       const savedIds = ((savesRes.data as { session_id: string }[] | null) ?? []).map((s) => s.session_id);
       setSaves(new Set(savedIds));
       const answeredIds = ((answersRes.data as { session_id: string }[] | null) ?? []).map((a) => a.session_id);
       setAnswered(new Set(answeredIds));
+      setWantSongs(wantSongsRes);
       setLoading(false);
     });
   }, [userId]);
@@ -145,10 +146,9 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
   const instruments = profile?.instruments ?? [];
   const genres = profile?.genres ?? [];
   const favoriteArtists = profile?.favorite_artists ?? [];
-  const favoriteTracks = profile?.favorite_tracks ?? [];
   const sns = (profile?.sns_links ?? {}) as Record<string, string>;
   const hasSns = Object.values(sns).some((v) => !!v);
-  const hasInfoCard = instruments.length > 0 || genres.length > 0 || favoriteArtists.length > 0 || favoriteTracks.length > 0 || !!profile?.bio || hasSns;
+  const hasInfoCard = instruments.length > 0 || wantSongs.length > 0 || genres.length > 0 || favoriteArtists.length > 0 || !!profile?.bio || hasSns;
 
   return (
     <>
@@ -421,12 +421,11 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
                   )}
                 </div>
 
-                {/* 名前 + 練習中バッジ */}
+                {/* 名前 */}
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                   <div style={{ fontSize: "24px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.3px" }}>
                     {profile?.nickname ?? ""}
                   </div>
-                  {profile?.is_practice && <PracticeBadge />}
                 </div>
 
                 {/* エリア */}
@@ -443,6 +442,10 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
 
               {/* 情報カード */}
               {hasInfoCard && (
+                <>
+                  <div style={{ margin: "0 22px 10px", fontSize: "11px", fontWeight: 700, color: "var(--text2)", letterSpacing: "0.5px", textTransform: "uppercase" as const }}>
+                    パートと音楽
+                  </div>
                 <div
                   style={{
                     margin: "0 18px",
@@ -455,7 +458,7 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
                   }}
                 >
                   {instruments.length > 0 && (
-                    <div style={{ padding: "14px 0", borderBottom: (genres.length > 0 || favoriteArtists.length > 0 || favoriteTracks.length > 0 || !!profile?.bio || hasSns) ? "1px solid var(--border)" : "none" }}>
+                    <div style={{ padding: "14px 0", borderBottom: (wantSongs.length > 0 || favoriteArtists.length > 0 || genres.length > 0 || !!profile?.bio || hasSns) ? "1px solid var(--border)" : "none" }}>
                       <div style={INFO_LBL}>パート・楽器</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                         {instruments.map((v) => (
@@ -464,18 +467,18 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
                       </div>
                     </div>
                   )}
-                  {genres.length > 0 && (
-                    <div style={{ padding: "14px 0", borderBottom: (favoriteArtists.length > 0 || favoriteTracks.length > 0 || !!profile?.bio || hasSns) ? "1px solid var(--border)" : "none" }}>
-                      <div style={INFO_LBL}>ジャンル</div>
+                  {wantSongs.length > 0 && (
+                    <div style={{ padding: "14px 0", borderBottom: (favoriteArtists.length > 0 || genres.length > 0 || !!profile?.bio || hasSns) ? "1px solid var(--border)" : "none" }}>
+                      <div style={INFO_LBL}>やりたい曲</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                        {genres.map((v) => (
-                          <span key={v} style={{ background: "var(--card2)", border: "1px solid var(--border)", borderRadius: "12px", padding: "5px 11px", fontSize: "11.5px", fontWeight: 500, color: "var(--text2)" }}>{v}</span>
+                        {wantSongs.map((v) => (
+                          <span key={v.id} style={{ background: "var(--red-bg)", border: "1px solid var(--red-border)", borderRadius: "12px", padding: "5px 11px", fontSize: "11.5px", fontWeight: 600, color: "var(--red2)" }}>{v.title}</span>
                         ))}
                       </div>
                     </div>
                   )}
                   {favoriteArtists.length > 0 && (
-                    <div style={{ padding: "14px 0", borderBottom: (favoriteTracks.length > 0 || !!profile?.bio || hasSns) ? "1px solid var(--border)" : "none" }}>
+                    <div style={{ padding: "14px 0", borderBottom: (genres.length > 0 || !!profile?.bio || hasSns) ? "1px solid var(--border)" : "none" }}>
                       <div style={INFO_LBL}>好きなアーティスト</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                         {favoriteArtists.map((v) => (
@@ -484,11 +487,11 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
                       </div>
                     </div>
                   )}
-                  {favoriteTracks.length > 0 && (
+                  {genres.length > 0 && (
                     <div style={{ padding: "14px 0", borderBottom: (!!profile?.bio || hasSns) ? "1px solid var(--border)" : "none" }}>
-                      <div style={INFO_LBL}>好きな曲</div>
+                      <div style={INFO_LBL}>ジャンル</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                        {favoriteTracks.map((v) => (
+                        {genres.map((v) => (
                           <span key={v} style={{ background: "var(--card2)", border: "1px solid var(--border)", borderRadius: "12px", padding: "5px 11px", fontSize: "11.5px", fontWeight: 500, color: "var(--text2)" }}>{v}</span>
                         ))}
                       </div>
@@ -547,6 +550,7 @@ export default function ProfileOverlay({ userId, onClose, currentUserId }: Props
                     </div>
                   )}
                 </div>
+                </>
               )}
 
               {/* セッションカードセクション */}

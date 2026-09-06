@@ -2,7 +2,7 @@
  * デザインプレビュー専用のダミーデータ。
  * 実データ取得ロジックとは独立させている（src/app/design-preview/** からのみ参照する想定）。
  */
-import type { Database } from "@/types/database";
+import type { Database, Song } from "@/types/database";
 import type { SessionWithAuthor } from "@/lib/db";
 import type { MsgRow } from "@/app/(app)/messages/page";
 import type { AnswerWithContext, ActiveChat } from "@/components/notifications/NotificationsView";
@@ -23,7 +23,6 @@ export const mockProfile: ProfileRow = {
   instruments: ["ギター", "ボーカル"],
   genres: ["ロック", "ポップ"],
   favorite_artists: ["Mr.Children", "back number"],
-  favorite_tracks: ["Tomorrow never knows"],
   bio: "土日に練習中。一緒にセッションできる人募集してます🎸",
   avatar_url: null,
   sns_links: {},
@@ -40,7 +39,6 @@ export const mockPartner: ProfileRow = {
   instruments: ["ドラム"],
   genres: ["ファンク", "ジャズ"],
   favorite_artists: ["東京事変"],
-  favorite_tracks: [],
   bio: null,
   avatar_url: null,
   sns_links: {},
@@ -55,25 +53,40 @@ const mockSimilarUser: ProfileRow = {
   nickname: "そら",
 };
 
+export const mockWantSongs: Song[] = [
+  { id: "design-preview-song-want-1", title: "Tomorrow never knows", artist: "Mr.Children", apple_track_id: null, is_original: false, created_at: now },
+];
+
+const mockSong: Song = {
+  id: "design-preview-song-1",
+  title: "弾き語りカバー",
+  artist: "Mr.Children",
+  apple_track_id: null,
+  is_original: false,
+  created_at: now,
+};
+
 const mockSessionBase: SessionRow = {
   id: "design-preview-session-1",
   author_id: mockProfile.id,
-  title: "弾き語りでカバーしてみました",
+  song_id: mockSong.id,
+  requested_part: "ギター",
+  area: "東京都",
+  genre: "ロック",
   body: "初めて投稿します。よかったら聴いてください🎵",
   audio_url: "/mock-audio.mp3",
   waveform_peaks: null,
-  is_practice: true,
-  tags: ["ギター", "ロック", "東京都"],
+  wip: true,
   created_at: now,
 };
 
 export const mockOwnSessions: SessionWithAuthor[] = [
-  { ...mockSessionBase, author: mockProfile },
+  { ...mockSessionBase, author: mockProfile, song: mockSong },
   {
     ...mockSessionBase,
     id: "design-preview-session-2",
-    title: "弾いてみた第2弾",
     author: mockProfile,
+    song: mockSong,
   },
 ];
 
@@ -83,11 +96,10 @@ export const mockMessageRows: MsgRow[] = [
   {
     roomId: "design-preview-answer-1",
     sessionId: mockSessionBase.id,
-    sessionTitle: mockSessionBase.title,
+    sessionTitle: mockSong.title,
     partnerNickname: mockPartner.nickname,
     partnerUserId: mockPartner.id,
     partnerAvatarUrl: mockPartner.avatar_url,
-    partnerIsPractice: mockPartner.is_practice,
     role: "host",
     previewText: "新しいアンサーが届きました",
     previewState: "alert",
@@ -101,7 +113,6 @@ export const mockMessageRows: MsgRow[] = [
     partnerNickname: mockProfile.nickname,
     partnerUserId: mockProfile.id,
     partnerAvatarUrl: mockProfile.avatar_url,
-    partnerIsPractice: mockProfile.is_practice,
     role: "host",
     previewText: "セッションアンサーはまだいません",
     previewState: "empty",
@@ -125,7 +136,7 @@ export const mockPendingAnswers: AnswerWithContext[] = [
   {
     ...mockAnswer,
     sender: mockPartner,
-    session: { id: mockSessionBase.id, title: mockSessionBase.title },
+    session: { id: mockSessionBase.id, song: { title: mockSong.title } },
   },
 ];
 
@@ -135,7 +146,6 @@ export const mockActiveChats: ActiveChat[] = [
     sessionTitle: "弾いてみた第2弾",
     partnerNickname: mockSimilarUser.nickname,
     partnerAvatarUrl: mockSimilarUser.avatar_url,
-    partnerIsPractice: mockSimilarUser.is_practice,
   },
 ];
 

@@ -39,9 +39,8 @@ export default function SearchOverlay({ open, onClose, sessions, savedIds, answe
   const trimmed = query.trim().toLowerCase();
   const results = trimmed
     ? sessions.filter((s) => {
-        const artists = s.author.favorite_artists ?? [];
-        const tracks = s.author.favorite_tracks ?? [];
-        return [...artists, ...tracks].some((v) => v.toLowerCase().includes(trimmed));
+        const artist = s.song.is_original ? "オリジナル曲" : (s.song.artist ?? "");
+        return s.song.title.toLowerCase().includes(trimmed) || artist.toLowerCase().includes(trimmed);
       })
     : [];
 

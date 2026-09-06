@@ -2,19 +2,19 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Flag, Ban, Trash2, Pencil } from "lucide-react";
+import { Check, Flag, Ban, Trash2, Pencil, ChevronDown } from "lucide-react";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import Avatar from "@/components/ui/Avatar";
-import PracticeBadge from "@/components/ui/PracticeBadge";
-import { SendIcon, NoteIcon, BookmarkIcon, MoreIcon } from "@/components/icons/CustomIcons";
+import { SendIcon, BookmarkIcon, MoreIcon } from "@/components/icons/CustomIcons";
 import { useProfile } from "@/contexts/ProfileContext";
 import { createClient } from "@/lib/supabase";
 import { deleteAudio } from "@/lib/storage";
-import type { Session, Profile } from "@/types/database";
+import type { Song } from "@/types/database";
+import type { SessionWithAuthor } from "@/lib/db";
 
 interface SessionCardProps {
-  session: Session & { author: Profile };
-  onAnswer?: (session: Session) => void;
+  session: SessionWithAuthor;
+  onAnswer?: (session: SessionWithAuthor) => void;
   onSave?: (sessionId: string) => void;
   onReport?: (userId: string, nickname: string, sessionId: string) => void;
   onBlock?: (userId: string, nickname: string) => void;
@@ -71,6 +71,10 @@ function MenuDropdown({ onClose, children }: { onClose: () => void; children: Re
   );
 }
 
+function artistLabel(song: Song): string {
+  return song.is_original ? "オリジナル曲" : (song.artist ?? "");
+}
+
 export default function SessionCard({
   session,
   onAnswer,
@@ -85,6 +89,7 @@ export default function SessionCard({
   variant = "timeline",
 }: SessionCardProps) {
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
   const [bodyExpanded, setBodyExpanded] = useState(false);
   const [bodyOverflowing, setBodyOverflowing] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -101,7 +106,7 @@ export default function SessionCard({
     const ro = new ResizeObserver(check);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [session.body, bodyExpanded]);
+  }, [session.body, bodyExpanded, expanded]);
 
   function handleEdit() {
     setMenuOpen(false);
@@ -137,10 +142,89 @@ export default function SessionCard({
     day: "2-digit",
   });
 
+  function renderSongHeader() {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        aria-expanded={expanded}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          width: "100%",
+          marginTop: "11px",
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          textAlign: "left",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: "16px",
+              fontWeight: 600,
+              color: "var(--accent-light)",
+              lineHeight: "22px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {session.song.title}
+          </div>
+          <div style={{ marginTop: "3px", display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+            <span
+              style={{
+                fontSize: "13px",
+                color: "var(--accent-muted)",
+                minWidth: 0,
+                flex: "0 1 auto",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {artistLabel(session.song)}
+            </span>
+            {session.wip && (
+              <span
+                style={{
+                  flex: "none",
+                  height: "20px",
+                  padding: "0 8px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  borderRadius: "10px",
+                  border: "1px solid var(--border-solid)",
+                  background: "var(--tag-solid)",
+                  fontSize: "10.5px",
+                  fontWeight: 600,
+                  color: "var(--accent-muted)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                まだ練習中
+              </span>
+            )}
+          </div>
+        </div>
+        <ChevronDown
+          size={17}
+          color="var(--accent-muted)"
+          style={{ flexShrink: 0, transition: "transform 0.25s", transform: expanded ? "rotate(180deg)" : "none" }}
+        />
+      </button>
+    );
+  }
+
   function renderBody() {
     if (!session.body) return null;
     return (
-      <div style={{ marginTop: "4px", position: "relative" }}>
+      <div style={{ marginTop: "14px", position: "relative" }}>
         <div
           ref={bodyRef}
           role={bodyOverflowing ? "button" : undefined}
@@ -210,51 +294,41 @@ export default function SessionCard({
     );
   }
 
-  function renderTags(showLabel: boolean) {
-    if (session.tags.length === 0) return null;
+  function renderConditionTags() {
+    const items: { label: string; value: string }[] = [
+      { label: "募集パート", value: session.requested_part },
+      { label: "エリア", value: session.area },
+      { label: "ジャンル", value: session.genre },
+    ];
     return (
-      <>
-        {showLabel && (
-          <div style={{ marginTop: "20px", display: "flex", alignItems: "center", gap: "8px", color: "var(--red)", fontSize: "13px", fontWeight: 700 }}>
-            <NoteIcon size={14} />
-            希望アンサー
-          </div>
-        )}
-        <div style={{ marginTop: showLabel ? "10.5px" : "20px", display: "flex", gap: "5.5px", flexWrap: "wrap" }}>
-          {session.tags.map((tag) => (
-            <span
-              key={tag}
-              style={{
-                height: "25px",
-                padding: "0 7px",
-                display: "inline-flex",
-                alignItems: "center",
-                background: "var(--tag-solid)",
-                border: "1px solid var(--border-solid)",
-                borderRadius: "6px",
-                fontSize: "12px",
-                color: "var(--accent-light)",
-              }}
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      </>
-    );
-  }
-
-  function renderTitle() {
-    return (
-      <div style={{ marginTop: "11px", fontSize: "15.4px", fontWeight: 700, color: "var(--accent-light)", lineHeight: "22px" }}>
-        {session.title}
+      <div style={{ marginTop: "14px", display: "flex", gap: "6px", flexWrap: "wrap" }}>
+        {items.map((item) => (
+          <span
+            key={item.label}
+            style={{
+              height: "29px",
+              padding: "0 12px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              background: "var(--tag-solid)",
+              border: "1px solid var(--border-solid)",
+              borderRadius: "14px",
+              fontSize: "12px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span style={{ color: "var(--text3)" }}>{item.label}</span>
+            <span style={{ color: "var(--accent-light)", fontWeight: 600 }}>{item.value}</span>
+          </span>
+        ))}
       </div>
     );
   }
 
   function renderAnswerCta() {
     return (
-      <div style={{ display: "flex", justifyContent: "flex-end", margin: "25px -18px 0 0" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", margin: "20px -18px 0 0" }}>
         <button
           type="button"
           onClick={() => !hasAnswered && onAnswer?.(session)}
@@ -284,6 +358,17 @@ export default function SessionCard({
     );
   }
 
+  function renderExpandedContent(withCta: boolean) {
+    if (!expanded) return null;
+    return (
+      <>
+        {renderBody()}
+        {renderConditionTags()}
+        {withCta && renderAnswerCta()}
+      </>
+    );
+  }
+
   return (
     <article
       style={{
@@ -296,9 +381,9 @@ export default function SessionCard({
         transition: "opacity 0.2s",
       }}
     >
-      {/* 他人のカード: 日付行 → アバター・名前・練習中バッジ・保存・⋯行 — timeline default variant */}
+      {/* 他人のカード: 日付行 → アバター・名前・保存・⋯行 — timeline default variant */}
       {isDefaultVariant && (
-        <div style={{ padding: "6px 18px 0" }}>
+        <div style={{ padding: "6px 18px 20px" }}>
           <div style={{ textAlign: "right", fontSize: "13px", lineHeight: 1, color: "var(--accent-muted)" }}>
             {dateStr}
           </div>
@@ -325,7 +410,6 @@ export default function SessionCard({
             >
               {author.nickname}
             </span>
-            {author.is_practice && <PracticeBadge mini />}
 
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "9px" }}>
               <button
@@ -396,11 +480,9 @@ export default function SessionCard({
             )}
           </div>
 
-          {renderTitle()}
-          {renderBody()}
-          {renderTags(true)}
+          {renderSongHeader()}
 
-          <div style={{ marginTop: "24px" }}>
+          <div style={{ marginTop: "14px" }}>
             <AudioPlayer
               src={session.audio_url}
               showListening={listeningCount}
@@ -409,11 +491,11 @@ export default function SessionCard({
             />
           </div>
 
-          {renderAnswerCta()}
+          {renderExpandedContent(true)}
         </div>
       )}
 
-      {/* 自分のカード: 日付行 → アバター・名前・練習中バッジ・⋯行 — timeline variant */}
+      {/* 自分のカード: 日付行 → アバター・名前・⋯行 — timeline variant */}
       {isOwn && variant !== "mypage" && (
         <div style={{ padding: "6px 18px 20px" }}>
           <div style={{ textAlign: "right", fontSize: "13px", lineHeight: 1, color: "var(--accent-muted)" }}>
@@ -442,7 +524,6 @@ export default function SessionCard({
             >
               {author.nickname}
             </span>
-            {author.is_practice && <PracticeBadge mini />}
 
             <button
               type="button"
@@ -478,11 +559,9 @@ export default function SessionCard({
             )}
           </div>
 
-          {renderTitle()}
-          {renderBody()}
-          {renderTags(true)}
+          {renderSongHeader()}
 
-          <div style={{ marginTop: "24px" }}>
+          <div style={{ marginTop: "14px" }}>
             <AudioPlayer
               src={session.audio_url}
               showListening={listeningCount}
@@ -490,6 +569,8 @@ export default function SessionCard({
               bare
             />
           </div>
+
+          {renderExpandedContent(false)}
         </div>
       )}
 
@@ -533,11 +614,9 @@ export default function SessionCard({
             )}
           </div>
 
-          {renderTitle()}
-          {renderBody()}
-          {renderTags(false)}
+          {renderSongHeader()}
 
-          <div style={{ marginTop: "24px" }}>
+          <div style={{ marginTop: "14px" }}>
             <AudioPlayer
               src={session.audio_url}
               showListening={listeningCount}
@@ -545,12 +624,14 @@ export default function SessionCard({
               bare
             />
           </div>
+
+          {renderExpandedContent(false)}
         </div>
       )}
 
       {/* 他人のカード: プロフィール画面表示（アバター行は省略、日付+保存+⋯） */}
       {!isOwn && variant === "profile" && (
-        <div style={{ padding: "6px 18px 0" }}>
+        <div style={{ padding: "6px 18px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "9px", position: "relative" }}>
             <span style={{ flex: 1, fontSize: "13px", lineHeight: 1, color: "var(--accent-muted)" }}>
               {dateStr}
@@ -621,11 +702,9 @@ export default function SessionCard({
             )}
           </div>
 
-          {renderTitle()}
-          {renderBody()}
-          {renderTags(true)}
+          {renderSongHeader()}
 
-          <div style={{ marginTop: "24px" }}>
+          <div style={{ marginTop: "14px" }}>
             <AudioPlayer
               src={session.audio_url}
               showListening={listeningCount}
@@ -634,7 +713,7 @@ export default function SessionCard({
             />
           </div>
 
-          {renderAnswerCta()}
+          {renderExpandedContent(true)}
         </div>
       )}
     </article>

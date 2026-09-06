@@ -30,7 +30,7 @@ export default function PrivacyPolicyPage() {
           <p className="legal-p">当サービスは、ご利用にあたり以下の情報を取得します。</p>
           <ul className="legal-ul">
             <li><span className="legal-strong">アカウント情報：</span>メールアドレス（メール認証・Googleログインを利用する場合）、Googleアカウントの基本プロフィール情報（Googleログインを利用する場合のみ）</li>
-            <li><span className="legal-strong">プロフィール情報：</span>ニックネーム、エリア、練習中フラグ、楽器・ジャンル・好きなアーティスト／好きな曲、自己紹介、アバター画像、SNSリンク</li>
+            <li><span className="legal-strong">プロフィール情報：</span>ニックネーム、エリア、練習中フラグ、楽器・ジャンル・好きなアーティスト／やりたい曲、自己紹介、アバター画像、SNSリンク</li>
             <li><span className="legal-strong">年齢確認情報：</span>生年月日（18歳以上であることの確認にのみ使用し、プロフィール等で第三者に公開することはありません）</li>
             <li><span className="legal-strong">投稿コンテンツ：</span>投稿・アンサーとして送信されるMP3音源ファイル、タイトル・本文・タグ</li>
             <li><span className="legal-strong">コミュニケーション情報：</span>承認済みの相手とのチャットメッセージ（第三者には非公開です）</li>

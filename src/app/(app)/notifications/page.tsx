@@ -8,7 +8,7 @@ import type { Database } from "@/types/database";
 
 type AnswerRow = Database["public"]["Tables"]["answers"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
+type SessionRow = { id: string; song: { title: string } };
 
 export default async function NotificationsPage() {
   const supabase = await createServerSupabase();
@@ -20,10 +20,10 @@ export default async function NotificationsPage() {
   // 自分のセッション一覧
   const { data: mySessions } = await supabase
     .from("sessions")
-    .select("id, title")
+    .select("id, song:songs(title)")
     .eq("author_id", currentUserId);
 
-  const mySessionRows = (mySessions as Pick<SessionRow, "id" | "title">[] | null) ?? [];
+  const mySessionRows = (mySessions as unknown as SessionRow[] | null) ?? [];
   const mySessionIds = mySessionRows.map((s) => s.id);
   const sessionMap = new Map(mySessionRows.map((s) => [s.id, s]));
 
@@ -93,10 +93,9 @@ export default async function NotificationsPage() {
       if (session && partner) {
         activeChats.push({
           answerId: row.id,
-          sessionTitle: session.title,
+          sessionTitle: session.song.title,
           partnerNickname: partner.nickname,
           partnerAvatarUrl: partner.avatar_url,
-          partnerIsPractice: partner.is_practice ?? false,
         });
       }
     }
@@ -116,10 +115,10 @@ export default async function NotificationsPage() {
 
     const { data: sessionsRaw } = await supabase
       .from("sessions")
-      .select("id, title, author_id")
+      .select("id, author_id, song:songs(title)")
       .in("id", senderSessionIds);
 
-    const sessionRows = (sessionsRaw as (Pick<SessionRow, "id" | "title"> & { author_id: string })[] | null) ?? [];
+    const sessionRows = (sessionsRaw as unknown as (SessionRow & { author_id: string })[] | null) ?? [];
     const sessionInfoMap = new Map(sessionRows.map((s) => [s.id, s]));
     const authorIds = [...new Set(sessionRows.map((s) => s.author_id))];
 
@@ -141,10 +140,9 @@ export default async function NotificationsPage() {
       if (author) {
         activeChats.push({
           answerId: row.id,
-          sessionTitle: s.title,
+          sessionTitle: s.song.title,
           partnerNickname: author.nickname,
           partnerAvatarUrl: author.avatar_url,
-          partnerIsPractice: author.is_practice ?? false,
         });
       }
     }

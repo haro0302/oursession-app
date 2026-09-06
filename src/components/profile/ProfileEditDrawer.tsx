@@ -4,23 +4,26 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Edit2, Camera, Plus, X } from "lucide-react";
-import { updateProfile } from "@/lib/db";
+import { updateProfile, getWantSongs, replaceWantSongs } from "@/lib/db";
 import { uploadAvatar } from "@/lib/avatar-upload";
 import { useProfileStore } from "@/store/profileStore";
 import { showToast } from "@/components/ui/Toast";
 import { PREFECTURES } from "@/lib/constants/prefectures";
 import FilterSheet from "@/components/session/FilterSheet";
 import TagAutocompleteInput from "@/components/profile/TagAutocompleteInput";
+import WantSongsInput, { type WantSong } from "@/components/profile/WantSongsInput";
 import type { Profile } from "@/types/database";
 
 interface Props {
   profile: Profile;
+  /** これを外部から increment すると、トリガーボタン無しでドロワーを開く（例: プロフィール仕上げカードのCTA） */
+  openSignal?: number;
 }
 
 const MAX_TAGS = 10;
 const MAX_BIO = 400;
 
-export default function ProfileEditDrawer({ profile }: Props) {
+export default function ProfileEditDrawer({ profile, openSignal }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -37,7 +40,7 @@ export default function ProfileEditDrawer({ profile }: Props) {
   const [instruments, setInstruments] = useState<string[]>([]);
   const [genres, setGenres] = useState<string[]>([]);
   const [artists, setArtists] = useState<string[]>([]);
-  const [tracks, setTracks] = useState<string[]>([]);
+  const [wantSongs, setWantSongs] = useState<WantSong[]>([]);
   const [area, setArea] = useState("");
   const [snsX, setSnsX] = useState("");
   const [snsIg, setSnsIg] = useState("");
@@ -53,6 +56,11 @@ export default function ProfileEditDrawer({ profile }: Props) {
   const bioTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (openSignal) handleOpen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal]);
 
   function resizeBioTextarea() {
     const el = bioTextareaRef.current;
@@ -74,7 +82,6 @@ export default function ProfileEditDrawer({ profile }: Props) {
     setInstruments(profile.instruments ?? []);
     setGenres(profile.genres ?? []);
     setArtists(profile.favorite_artists ?? []);
-    setTracks((profile.favorite_tracks as string[] | null) ?? []);
     setArea(profile.area ?? "");
     setSnsX(sns.x ?? "");
     setSnsIg(sns.instagram ?? "");
@@ -82,6 +89,9 @@ export default function ProfileEditDrawer({ profile }: Props) {
     setFilterSheetOpen(false);
     setEditSession((s) => s + 1);
     setOpen(true);
+    getWantSongs(profile.id).then((songs) =>
+      setWantSongs(songs.map((s) => ({ songId: s.id, title: s.title, artist: s.artist })))
+    );
   }
 
   function handleClose() {
@@ -112,11 +122,11 @@ export default function ProfileEditDrawer({ profile }: Props) {
         instruments,
         genres,
         favorite_artists: artists,
-        favorite_tracks: tracks,
         area: area || null,
         sns_links: { x: snsX.trim(), instagram: snsIg.trim(), soundcloud: snsCloud.trim() },
         avatar_url: avatarUrl,
       });
+      await replaceWantSongs(profile.id, wantSongs.map((s) => s.songId));
       // ストアを即時更新（router.refresh() 完了を待たずに反映）
       useProfileStore.getState().refetch(profile.id);
       showToast("プロフィールを更新しました");
@@ -279,6 +289,26 @@ export default function ProfileEditDrawer({ profile }: Props) {
             </div>
           </div>
 
+          {/* やりたい曲 */}
+          <WantSongsInput
+            key={`want-songs-${editSession}`}
+            value={wantSongs}
+            onChange={setWantSongs}
+            maxTags={MAX_TAGS}
+          />
+
+          {/* 好きなアーティスト */}
+          <TagAutocompleteInput
+            key={`artist-${editSession}`}
+            label="好きなアーティスト"
+            hint={`任意・最大${MAX_TAGS}件`}
+            value={artists}
+            onChange={setArtists}
+            searchType="artist"
+            placeholder="アーティスト名を入力して Enter"
+            maxTags={MAX_TAGS}
+          />
+
           {/* ジャンル */}
           <div className="pe-section">
             <div className="pe-section-label">好きなジャンル</div>
@@ -301,30 +331,6 @@ export default function ProfileEditDrawer({ profile }: Props) {
               </button>
             </div>
           </div>
-
-          {/* 好きなアーティスト */}
-          <TagAutocompleteInput
-            key={`artist-${editSession}`}
-            label="好きなアーティスト"
-            hint={`任意・最大${MAX_TAGS}件`}
-            value={artists}
-            onChange={setArtists}
-            searchType="artist"
-            placeholder="アーティスト名を入力して Enter"
-            maxTags={MAX_TAGS}
-          />
-
-          {/* 好きな曲 */}
-          <TagAutocompleteInput
-            key={`track-${editSession}`}
-            label="好きな曲"
-            hint={`任意・最大${MAX_TAGS}件`}
-            value={tracks}
-            onChange={setTracks}
-            searchType="song"
-            placeholder="曲名を入力して Enter"
-            maxTags={MAX_TAGS}
-          />
 
           {/* エリア */}
           <div className="pe-section">

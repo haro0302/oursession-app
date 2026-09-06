@@ -1,20 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
-import { Settings, ExternalLink } from "lucide-react";
+import { Settings, ExternalLink, ChevronRight } from "lucide-react";
 import { normalizeUsername, soundcloudHref } from "@/lib/sns";
 import { BookmarkIcon, PinIcon } from "@/components/icons/CustomIcons";
 import Avatar from "@/components/ui/Avatar";
-import PracticeBadge from "@/components/ui/PracticeBadge";
 import SimilarUsersSlider from "@/components/mypage/SimilarUsersSlider";
 import ProfileEditDrawer from "@/components/profile/ProfileEditDrawer";
 import SessionCard from "@/components/session/SessionCard";
 import SettingsOverlay from "@/components/overlay/SettingsOverlay";
 import SavedOverlay from "@/components/overlay/SavedOverlay";
 import type { SessionWithAuthor } from "@/lib/db";
-import type { Database } from "@/types/database";
+import type { Database, Song } from "@/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -22,8 +21,11 @@ interface Props {
   profile: Profile | null;
   ownSessions: SessionWithAuthor[];
   similarUsers: Profile[];
+  wantSongs: Song[];
   userId: string;
 }
+
+const SETUP_DISMISS_KEY = "os_setup_card_dismissed_v1";
 
 const INFO_LBL: CSSProperties = {
   fontSize: "13px",
@@ -71,26 +73,55 @@ export default function MypageClient({
   profile,
   ownSessions,
   similarUsers,
+  wantSongs,
   userId,
 }: Props) {
   const router = useRouter();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
   const [sessions, setSessions] = useState(ownSessions);
+  const [editOpenSignal, setEditOpenSignal] = useState(0);
+  const [setupDismissed, setSetupDismissed] = useState(true);
 
   const instruments = profile?.instruments ?? [];
   const genres = profile?.genres ?? [];
   const favoriteArtists = profile?.favorite_artists ?? [];
-  const favoriteTracks = profile?.favorite_tracks ?? [];
   const sns = (profile?.sns_links ?? {}) as Record<string, string>;
   const hasSns = Object.values(sns).some((v) => !!v);
   const hasInfoCard =
     instruments.length > 0 ||
-    genres.length > 0 ||
+    wantSongs.length > 0 ||
     favoriteArtists.length > 0 ||
-    favoriteTracks.length > 0 ||
+    genres.length > 0 ||
     !!profile?.bio ||
     hasSns;
+
+  const setupSteps = [
+    instruments.length > 0,
+    !!profile?.area,
+    !!profile?.bio,
+    wantSongs.length > 0,
+  ];
+  const setupDone = setupSteps.filter(Boolean).length;
+  const setupTotal = setupSteps.length;
+  const showSetupCard = !setupDismissed && setupDone < setupTotal;
+
+  useEffect(() => {
+    try {
+      setSetupDismissed(localStorage.getItem(`${SETUP_DISMISS_KEY}_${userId}`) === "1");
+    } catch {
+      setSetupDismissed(false);
+    }
+  }, [userId]);
+
+  function dismissSetupCard() {
+    setSetupDismissed(true);
+    try {
+      localStorage.setItem(`${SETUP_DISMISS_KEY}_${userId}`, "1");
+    } catch {
+      // ブラウザ側でstorageが使えない場合は今回のセッションだけ非表示になる
+    }
+  }
 
   function handleDelete(sessionId: string) {
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
@@ -130,7 +161,7 @@ export default function MypageClient({
             gap: "6px",
           }}
         >
-          {profile && <ProfileEditDrawer profile={profile} />}
+          {profile && <ProfileEditDrawer profile={profile} openSignal={editOpenSignal} />}
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
@@ -144,7 +175,7 @@ export default function MypageClient({
           </button>
         </div>
 
-        {/* アバター + 練習中バッジ */}
+        {/* アバター */}
         <div style={{ position: "relative", marginBottom: "24px" }}>
           <Avatar
             src={profile?.avatar_url}
@@ -152,18 +183,6 @@ export default function MypageClient({
             size="xl"
             isPractice={false}
           />
-          {profile?.is_practice && (
-            <div
-              style={{
-                position: "absolute",
-                left: "50%",
-                bottom: "-12.5px",
-                transform: "translateX(-50%)",
-              }}
-            >
-              <PracticeBadge />
-            </div>
-          )}
         </div>
 
         {/* ニックネーム */}
@@ -196,6 +215,62 @@ export default function MypageClient({
         )}
       </section>
 
+      {/* プロフィールを仕上げるカード */}
+      {showSetupCard && (
+        <div
+          style={{
+            background: "var(--card-solid)",
+            border: "1px solid var(--border-solid)",
+            borderRadius: "12px",
+            padding: "18px",
+            marginBottom: "22px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)" }}>プロフィールを仕上げる</span>
+            <button
+              type="button"
+              onClick={dismissSetupCard}
+              style={{ background: "transparent", border: "none", fontSize: "12px", color: "var(--text3)", cursor: "pointer", fontFamily: "inherit" }}
+            >
+              隠す
+            </button>
+          </div>
+          <div style={{ marginTop: "4px", fontSize: "12px", color: "var(--text3)" }}>
+            ステップ {setupDone} の {setupTotal}
+          </div>
+          <div style={{ marginTop: "10px", height: "3px", borderRadius: "2px", background: "var(--card2)", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${(setupDone / setupTotal) * 100}%`, background: "var(--red)", borderRadius: "2px" }} />
+          </div>
+          <button
+            type="button"
+            onClick={() => setEditOpenSignal((s) => s + 1)}
+            style={{
+              marginTop: "13px",
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              background: "var(--card2)",
+              border: "none",
+              borderRadius: "14px",
+              padding: "14px 16px",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text)" }}>やりたい曲を追加する</div>
+              <div style={{ marginTop: "2px", fontSize: "12px", color: "var(--text3)" }}>
+                同じ曲をやりたい人から見つけてもらえます
+              </div>
+            </div>
+            <ChevronRight size={18} color="var(--text3)" style={{ flexShrink: 0 }} />
+          </button>
+        </div>
+      )}
+
       {/* INFO CARD */}
       {hasInfoCard && (
         <div
@@ -210,6 +285,7 @@ export default function MypageClient({
             marginBottom: "22px",
           }}
         >
+          <div style={{ ...SECTION_LBL, margin: 0 }}>パートと音楽</div>
           {instruments.length > 0 && (
             <div>
               <div style={INFO_LBL}>パート・楽器</div>
@@ -222,13 +298,13 @@ export default function MypageClient({
               </div>
             </div>
           )}
-          {genres.length > 0 && (
+          {wantSongs.length > 0 && (
             <div>
-              <div style={INFO_LBL}>ジャンル</div>
+              <div style={INFO_LBL}>やりたい曲</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
-                {genres.map((g) => (
-                  <span key={g} style={TAG_STYLE}>
-                    {g}
+                {wantSongs.map((s) => (
+                  <span key={s.id} style={{ ...TAG_STYLE, border: "1px solid var(--red-border)", background: "var(--red-bg)", fontWeight: 700 }}>
+                    {s.title}
                   </span>
                 ))}
               </div>
@@ -246,13 +322,13 @@ export default function MypageClient({
               </div>
             </div>
           )}
-          {favoriteTracks.length > 0 && (
+          {genres.length > 0 && (
             <div>
-              <div style={INFO_LBL}>好きな曲</div>
+              <div style={INFO_LBL}>ジャンル</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
-                {favoriteTracks.map((t) => (
-                  <span key={t} style={TAG_STYLE}>
-                    {t}
+                {genres.map((g) => (
+                  <span key={g} style={TAG_STYLE}>
+                    {g}
                   </span>
                 ))}
               </div>

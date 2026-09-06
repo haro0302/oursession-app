@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase-server";
 import MypageClient from "./MypageClient";
+import { getWantSongs } from "@/lib/db";
 import type { SessionWithAuthor } from "@/lib/db";
-import type { Database } from "@/types/database";
+import type { Database, Song } from "@/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
+type SessionRow = Database["public"]["Tables"]["sessions"]["Row"] & { song: Song };
 
 function intersect(a: string[], b: string[]) {
   const setB = new Set(b);
@@ -39,11 +40,11 @@ export default async function MyPage() {
   // 自分のセッション
   const { data: ownSessionsRaw } = await supabase
     .from("sessions")
-    .select("*")
+    .select("*, song:songs(*)")
     .eq("author_id", userId)
     .order("created_at", { ascending: false });
   const ownSessions: SessionWithAuthor[] = profile
-    ? ((ownSessionsRaw as SessionRow[] | null) ?? []).map((s) => ({
+    ? ((ownSessionsRaw as unknown as SessionRow[] | null) ?? []).map((s) => ({
         ...s,
         author: profile as Profile,
       }))
@@ -67,11 +68,14 @@ export default async function MyPage() {
       .map(({ user }) => user);
   }
 
+  const wantSongs: Song[] = await getWantSongs(userId);
+
   return (
     <MypageClient
       profile={profile}
       ownSessions={ownSessions}
       similarUsers={similarUsers}
+      wantSongs={wantSongs}
       userId={userId}
     />
   );

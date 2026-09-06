@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase";
 import type { Database } from "@/types/database";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 type AnswerRow = Database["public"]["Tables"]["answers"]["Row"];
 type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 
@@ -26,12 +25,12 @@ export async function fetchNotifications(userId: string): Promise<DerivedNotif[]
   // 1. 自分のセッションへの未対応アンサー → type='answer'
   const { data: mySessions } = await supabase
     .from("sessions")
-    .select("id, title")
+    .select("id, song:songs(title)")
     .eq("author_id", userId);
 
-  const mySessionRows = (mySessions as Pick<SessionRow, "id" | "title">[] | null) ?? [];
+  const mySessionRows = (mySessions as unknown as { id: string; song: { title: string } }[] | null) ?? [];
   const mySessionIds = mySessionRows.map((s) => s.id);
-  const sessionTitleMap = new Map(mySessionRows.map((s) => [s.id, s.title]));
+  const sessionTitleMap = new Map(mySessionRows.map((s) => [s.id, s.song.title]));
 
   // 自分がホストの承認済みルーム(answer_id)一覧。message通知の対象に使う
   const hostApprovedAnswerIds: string[] = [];
@@ -93,16 +92,16 @@ export async function fetchNotifications(userId: string): Promise<DerivedNotif[]
   const rawApproved = (approvedAnswers as Pick<AnswerRow, "id" | "session_id" | "created_at">[] | null) ?? [];
   const approvedSessionIds = rawApproved.map((a) => a.session_id);
 
-  type ApprovedSession = Pick<SessionRow, "id" | "title"> & { author_id: string };
+  type ApprovedSession = { id: string; author_id: string; song: { title: string } };
   let approvedSessions: ApprovedSession[] = [];
 
   if (approvedSessionIds.length > 0) {
     const { data: approvedSessionsRaw } = await supabase
       .from("sessions")
-      .select("id, title, author_id")
+      .select("id, author_id, song:songs(title)")
       .in("id", approvedSessionIds);
 
-    approvedSessions = (approvedSessionsRaw as ApprovedSession[] | null) ?? [];
+    approvedSessions = (approvedSessionsRaw as unknown as ApprovedSession[] | null) ?? [];
     const authorIds = [...new Set(approvedSessions.map((s) => s.author_id))];
 
     let authorMap = new Map<string, Pick<ProfileRow, "id" | "nickname" | "avatar_url">>();
@@ -128,7 +127,7 @@ export async function fetchNotifications(userId: string): Promise<DerivedNotif[]
         fromUserId: sess.author_id,
         fromNickname: author.nickname,
         fromAvatarUrl: author.avatar_url,
-        contextTitle: sess.title,
+        contextTitle: sess.song.title,
         contextId: a.id,
         createdAt: a.created_at,
       });

@@ -5,7 +5,6 @@ export default function DesignPreviewPost() {
   return (
     <PostClient
       userId={mockProfile.id}
-      isPracticeDefault={mockProfile.is_practice}
       editSession={null}
     />
   );

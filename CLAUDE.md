@@ -114,9 +114,10 @@
 
 ### 必ず実装する安心装置
 
-- **「練習中」フラグ**（デフォルトON）。下手を言葉で謝らなくていい免罪符。閲覧側UIでは「歓迎される印」として扱う（自己卑下にしない）。
-  - 表示: プロフィールページ・マイページ・セッションカードのユーザー名横に「練習中」バッジ（絵文字なし、テキストのみ）
-  - 色: 黄→オレンジのグラデーション（`#ffd884` → `#ffa964`、歓迎の温かさ）
+- **「まだ練習中」チップ**（投稿単位・任意）。下手を言葉で謝らなくていい免罪符。「まだ」が本人の声として響くよう、必ずこの文言で統一する。
+  - 紐づく先は**人ではなく投稿**。同じ人でも、弾き慣れた曲には付かず、練習中の曲には付く＝誰も上下にならない。
+  - 表示: セッションカードの曲名・アーティスト名の行のみ（アーティスト名は縮めて省略してもチップは省略しない）
+  - ⚠️ プロフィール・マイページなど**人単位の場所には絶対に置かない**。人に付けた瞬間、二択・三択のランクとして読まれてしまう（第0条1参照）。`profiles.is_practice` は「似ている人」スコアリング用の内部データとしてのみ残し、バッジとしてはどの画面にも表示しない。
 - **公開範囲の明示**：投稿フォーム上部に安心ブロック（暖色アイコン + 「**足あとは残りません**」+ 補足文）を必ず1つ提示。**最大の恐怖を投稿前に消す**。
 - **沈黙への配慮**：プレイヤー直下に「**いま○人が聴いています**」を表示（現在進行形、緑色の控えめなドット）。**無反応＝無価値にしない**。0人の場合は表示しない。
 - **ハート保存（実装はブックマーク🔖アイコン）**：数字なし・足あと残らない・こっそり。
@@ -344,7 +345,7 @@
 
 ### 任意項目は後で
 
-アバター・自己紹介・好きなジャンル・好きなアーティスト・好きな曲・SNSはプロフィール編集ドロワーで後から設定。「**最小ウィザード + 後から育てる**」設計。
+アバター・自己紹介・好きなジャンル・好きなアーティスト・やりたい曲・SNSはプロフィール編集ドロワーで後から設定。「**最小ウィザード + 後から育てる**」設計。
 
 -----
 
@@ -352,14 +353,19 @@
 
 ```
 profiles ──< sessions ──< answers
-   │            │            │
-   │            └──< messages（カード単位チャット）
+   │    │        │            │
+   │    │        └──< messages（カード単位チャット）
+   │    │
+   │    └──< profile_want_songs >── songs（楽曲マスタ、sessions.song_id とも共用）
    │
    └──< saves（ハート保存・数字非表示）
 
 studios（スタジオマスタ・静的）
 
-sessions(id, author_id, title, body, audio_url, is_practice, tags[], created_at)
+songs(id, title, artist, apple_track_id, is_original, created_at)  ※JASRAC/NexTone報告・検索の土台
+sessions(id, author_id, song_id, requested_part, area, genre, body, audio_url,
+         wip, created_at)  ※wip=投稿単位の「まだ練習中」（人単位の練習中フラグとは別概念）
+profile_want_songs(profile_id, song_id, created_at)  ※複合PK。プロフィールの「やりたい曲」
 answers(id, session_id, sender_id, audio_url, message,
         status['pending'|'approved'|'declined'], created_at)
 messages(id, session_id, sender_id, body, created_at)  ※承認済み参加者のみ(RLS)
@@ -370,8 +376,8 @@ saves(user_id, session_id)  ※複合PK
 
 ```
 profiles {
-  id, nickname, area, is_practice (default true),
-  instruments[], genres[], favorite_artists[], favorite_tracks[],
+  id, nickname, area, is_practice (default true, スコアリング専用・バッジ表示なし),
+  instruments[], genres[], favorite_artists[],
   bio, avatar_url, sns_links,
   created_at, updated_at
 }

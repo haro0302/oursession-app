@@ -173,7 +173,7 @@ export default function AnswerDrawer({ open, onClose, session, currentUserId, on
               <div style={{
                 fontSize: "14px", fontWeight: 700, color: "var(--text)",
                 lineHeight: 1.3, marginBottom: "3px",
-              }}>{session.title}</div>
+              }}>{session.song.title}</div>
               <div style={{
                 fontSize: "11px", color: "var(--text3)",
                 display: "flex", alignItems: "center", gap: "5px",

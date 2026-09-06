@@ -9,7 +9,7 @@ type FilterKey = "instrument" | "genre" | "area";
 const FILTER_CHIPS: { key: FilterKey; label: string; icon: React.ReactNode }[] = [
   { key: "area", label: "エリア", icon: <PinIcon size={19} /> },
   { key: "genre", label: "ジャンル", icon: <NoteIcon size={14} /> },
-  { key: "instrument", label: "希望アンサー", icon: <GuitarIcon size={15} /> },
+  { key: "instrument", label: "募集パート", icon: <GuitarIcon size={15} /> },
 ];
 
 interface Props {
